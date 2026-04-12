@@ -1,7 +1,5 @@
 [build]
-builder = "nixpacks"
-buildCommand = "dotnet publish BridgeAlien.Analytics.Api/BridgeAlien.Analytics.Api.csproj -c Release -o out"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "dotnet out/BridgeAlien.Analytics.Api.dll"
 healthcheckPath = "/openapi/v1.json"
