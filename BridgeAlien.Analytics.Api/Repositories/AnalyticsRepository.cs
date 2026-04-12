@@ -41,12 +41,10 @@ public class AnalyticsRepository(string connectionString)
                  WHERE event_name = 'session_start'
                    AND created_at BETWEEN @From AND @To) AS total_sessions,
 
-                COALESCE(
-                    AVG((payload_json->>'duration_sec')::numeric)
-                , 0) AS avg_session_duration_sec
-            FROM analytics_events
-            WHERE event_name = 'session_end'
-              AND created_at BETWEEN @From AND @To
+                (SELECT COALESCE(AVG((payload_json->>'duration_sec')::numeric), 0)
+                 FROM analytics_events
+                 WHERE event_name = 'session_end'
+                   AND created_at BETWEEN @From AND @To) AS avg_session_duration_sec
             """,
             new { From = from, To = to });
 
