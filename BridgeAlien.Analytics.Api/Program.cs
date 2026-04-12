@@ -22,6 +22,8 @@ var app = builder.Build();
 app.MapOpenApi();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/openapi/v1.json", "Bridge-Alien Analytics API"));
 
+app.MapGet("/health", () => Results.Ok("healthy"));
+
 app.UseAuthorization();
 app.MapControllers();
 
