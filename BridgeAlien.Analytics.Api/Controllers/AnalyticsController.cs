@@ -24,7 +24,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
         [FromQuery] DateTime? to)
     {
         var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to   ?? DateTime.UtcNow;
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
         var result = await repo.GetSummaryAsync(f, t);
         return Ok(result);
     }
@@ -35,7 +35,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
         [FromQuery] DateTime? to)
     {
         var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to   ?? DateTime.UtcNow;
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
         var result = await repo.GetStageDropoffAsync(f, t);
         return Ok(result);
     }
@@ -46,7 +46,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
         [FromQuery] DateTime? to)
     {
         var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to   ?? DateTime.UtcNow;
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
         var result = await repo.GetMinigameSummaryAsync(f, t);
         return Ok(result);
     }
