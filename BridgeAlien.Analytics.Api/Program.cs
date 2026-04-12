@@ -11,11 +11,11 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // 연결 문자열: appsettings → DATABASE_URL(Railway) 순서로 탐색
-static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
-
+var pgFromConfig = builder.Configuration.GetConnectionString("Postgres");
+var pgFromEnv    = Environment.GetEnvironmentVariable("DATABASE_URL");
 var connectionString =
-    NullIfEmpty(builder.Configuration.GetConnectionString("Postgres"))
-    ?? NullIfEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
+    (!string.IsNullOrWhiteSpace(pgFromConfig) ? pgFromConfig : null)
+    ?? (!string.IsNullOrWhiteSpace(pgFromEnv) ? pgFromEnv : null)
     ?? throw new InvalidOperationException("PostgreSQL 연결 문자열이 설정되지 않았습니다.");
 
 builder.Services.AddSingleton(new AnalyticsRepository(connectionString));
