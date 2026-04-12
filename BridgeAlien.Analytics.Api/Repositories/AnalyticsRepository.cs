@@ -145,7 +145,7 @@ public class AnalyticsRepository(string connectionString)
 
         var rows = await conn.QueryAsync("""
             SELECT
-                date_trunc('day', first_seen)::date AS day,
+                date_trunc('day', first_seen) AS day,
                 COUNT(*) AS new_players
             FROM (
                 SELECT player_id, MIN(created_at) AS first_seen
@@ -154,7 +154,7 @@ public class AnalyticsRepository(string connectionString)
                   AND created_at BETWEEN @From AND @To
                 GROUP BY player_id
             ) sub
-            GROUP BY date_trunc('day', first_seen)::date
+            GROUP BY date_trunc('day', first_seen)
             ORDER BY day
             """,
             new { From = from, To = to });
