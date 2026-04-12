@@ -35,3 +35,25 @@ public class MinigameSummaryDto
     public double AvgDurationSec { get; set; }
     public double AvgComboCount  { get; set; }
 }
+
+public class DailyNewPlayersDto
+{
+    public string Day        { get; set; } = "";
+    public int    NewPlayers { get; set; }
+}
+
+public class StageDetailDto
+{
+    public string StageId            { get; set; } = "";
+    public int    Star1Count         { get; set; }
+    public int    Star2Count         { get; set; }
+    public int    Star3Count         { get; set; }
+    public double AvgClearDurationSec { get; set; }
+    public double AvgFailDurationSec  { get; set; }
+}
+
+public class RetentionBucketDto
+{
+    public int SessionCount { get; set; }
+    public int PlayerCount  { get; set; }
+}

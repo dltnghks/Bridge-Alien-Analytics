@@ -139,6 +139,92 @@ public class AnalyticsRepository(string connectionString)
     }
 
 
+    public async Task<IEnumerable<DailyNewPlayersDto>> GetDailyNewPlayersAsync(DateTime from, DateTime to)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var rows = await conn.QueryAsync("""
+            SELECT
+                date_trunc('day', first_seen)::date AS day,
+                COUNT(*) AS new_players
+            FROM (
+                SELECT player_id, MIN(created_at) AS first_seen
+                FROM analytics_events
+                WHERE event_name = 'session_start'
+                  AND created_at BETWEEN @From AND @To
+                GROUP BY player_id
+            ) sub
+            GROUP BY date_trunc('day', first_seen)::date
+            ORDER BY day
+            """,
+            new { From = from, To = to });
+
+        return rows.Select(r => new DailyNewPlayersDto
+        {
+            Day        = ((DateTime)r.day).ToString("yyyy-MM-dd"),
+            NewPlayers = (int)r.new_players
+        });
+    }
+
+    public async Task<IEnumerable<StageDetailDto>> GetStageDetailAsync(DateTime from, DateTime to)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var rows = await conn.QueryAsync("""
+            SELECT
+                stage_id,
+                COUNT(*) FILTER (WHERE event_name = 'stage_clear' AND (payload_json->>'star_count')::int = 1) AS star1,
+                COUNT(*) FILTER (WHERE event_name = 'stage_clear' AND (payload_json->>'star_count')::int = 2) AS star2,
+                COUNT(*) FILTER (WHERE event_name = 'stage_clear' AND (payload_json->>'star_count')::int = 3) AS star3,
+                COALESCE(AVG((payload_json->>'duration_sec')::numeric) FILTER (WHERE event_name = 'stage_clear'), 0) AS avg_clear_duration,
+                COALESCE(AVG((payload_json->>'duration_sec')::numeric) FILTER (WHERE event_name = 'stage_fail'),  0) AS avg_fail_duration
+            FROM analytics_events
+            WHERE event_name IN ('stage_clear', 'stage_fail')
+              AND stage_id IS NOT NULL
+              AND created_at BETWEEN @From AND @To
+            GROUP BY stage_id
+            ORDER BY stage_id
+            """,
+            new { From = from, To = to });
+
+        return rows.Select(r => new StageDetailDto
+        {
+            StageId             = r.stage_id,
+            Star1Count          = (int)r.star1,
+            Star2Count          = (int)r.star2,
+            Star3Count          = (int)r.star3,
+            AvgClearDurationSec = Math.Round((double)r.avg_clear_duration, 1),
+            AvgFailDurationSec  = Math.Round((double)r.avg_fail_duration, 1)
+        });
+    }
+
+    public async Task<IEnumerable<RetentionBucketDto>> GetRetentionAsync(DateTime from, DateTime to)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var rows = await conn.QueryAsync("""
+            SELECT
+                session_count,
+                COUNT(*) AS player_count
+            FROM (
+                SELECT player_id, COUNT(DISTINCT session_id) AS session_count
+                FROM analytics_events
+                WHERE event_name = 'session_start'
+                  AND created_at BETWEEN @From AND @To
+                GROUP BY player_id
+            ) sub
+            GROUP BY session_count
+            ORDER BY session_count
+            """,
+            new { From = from, To = to });
+
+        return rows.Select(r => new RetentionBucketDto
+        {
+            SessionCount = (int)r.session_count,
+            PlayerCount  = (int)r.player_count
+        });
+    }
+
     public async Task SaveEventsAsync(IEnumerable<AnalyticsEventDto> events)
     {
         await using var conn = new NpgsqlConnection(_connectionString);

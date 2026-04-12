@@ -6,7 +6,7 @@
   <title>Bridge-Alien Analytics</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -15,168 +15,104 @@
       min-height: 100vh;
     }
 
+    /* Header */
     header {
       background: #1a1d2e;
       border-bottom: 1px solid #2d3148;
-      padding: 20px 32px;
+      padding: 18px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: #a78bfa;
-      letter-spacing: -0.3px;
-    }
+    header h1 { font-size: 18px; font-weight: 700; color: #a78bfa; }
 
-    .filters {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .filters label { font-size: 13px; color: #94a3b8; }
-
+    .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filters label { font-size: 13px; color: #64748b; }
     .filters input[type="date"] {
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 6px;
-      color: #e2e8f0;
-      padding: 6px 10px;
-      font-size: 13px;
+      background: #0f1117; border: 1px solid #2d3148; border-radius: 6px;
+      color: #e2e8f0; padding: 6px 10px; font-size: 13px;
     }
-
     .filters button {
-      background: #7c3aed;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 7px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
+      background: #7c3aed; color: #fff; border: none; border-radius: 6px;
+      padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
     }
-
     .filters button:hover { background: #6d28d9; }
 
-    main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+    /* Layout */
+    main { padding: 28px 32px; max-width: 1280px; margin: 0 auto; }
 
-    /* 요약 카드 */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: #475569; margin: 32px 0 14px;
     }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 
     .card {
-      background: #1a1d2e;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 24px;
+      background: #1a1d2e; border: 1px solid #2d3148; border-radius: 12px; padding: 22px 24px;
     }
+    .card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .card .value { font-size: 34px; font-weight: 700; color: #a78bfa; line-height: 1; }
+    .card .unit  { font-size: 12px; color: #475569; margin-top: 5px; }
 
-    .card .label {
-      font-size: 12px;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
+    /* Grid 2-col */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+
+    /* Panel */
+    .panel {
+      background: #1a1d2e; border: 1px solid #2d3148; border-radius: 12px; padding: 24px;
     }
+    .panel h2 { font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 20px; }
 
-    .card .value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #a78bfa;
-      line-height: 1;
-    }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap-tall { position: relative; height: 300px; }
 
-    .card .unit {
-      font-size: 13px;
-      color: #64748b;
-      margin-top: 6px;
-    }
-
-    /* 차트 섹션 */
-    .section {
-      background: #1a1d2e;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 28px;
-      margin-bottom: 24px;
-    }
-
-    .section h2 {
-      font-size: 15px;
-      font-weight: 600;
-      color: #cbd5e1;
-      margin-bottom: 24px;
-    }
-
-    .chart-wrap {
-      position: relative;
-      height: 280px;
-    }
-
-    /* 미니게임 테이블 */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    th {
-      text-align: left;
-      padding: 10px 14px;
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    /* Funnel table */
+    .funnel { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .funnel th {
+      text-align: left; padding: 8px 12px; color: #475569; font-size: 11px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
       border-bottom: 1px solid #2d3148;
     }
+    .funnel td { padding: 10px 12px; border-bottom: 1px solid #1e2235; color: #e2e8f0; }
+    .funnel tr:last-child td { border-bottom: none; }
 
-    td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #1e2235;
-      color: #e2e8f0;
+    .bar-bg {
+      background: #1e2235; border-radius: 4px; height: 6px; width: 100%; margin-top: 4px;
     }
+    .bar-fill { height: 6px; border-radius: 4px; background: #7c3aed; }
 
-    tr:last-child td { border-bottom: none; }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+    .rate-pill {
+      display: inline-block; padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
     }
+    .good  { background: #14532d; color: #4ade80; }
+    .mid   { background: #713f12; color: #fbbf24; }
+    .bad   { background: #7f1d1d; color: #f87171; }
 
-    .badge-good  { background: #14532d; color: #4ade80; }
-    .badge-mid   { background: #713f12; color: #fbbf24; }
-    .badge-bad   { background: #7f1d1d; color: #f87171; }
-
-    .empty {
-      text-align: center;
-      padding: 48px;
-      color: #475569;
-      font-size: 14px;
+    /* Minigame table */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .mini-table th {
+      text-align: left; padding: 8px 12px; color: #475569; font-size: 11px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid #2d3148;
     }
+    .mini-table td { padding: 10px 12px; border-bottom: 1px solid #1e2235; }
+    .mini-table tr:last-child td { border-bottom: none; }
+
+    .empty { text-align: center; padding: 40px; color: #334155; font-size: 13px; }
 
     #error-msg {
-      display: none;
-      background: #7f1d1d;
-      color: #fca5a5;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-      font-size: 14px;
+      display: none; background: #450a0a; color: #fca5a5; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 20px; font-size: 13px;
     }
   </style>
 </head>
@@ -185,10 +121,8 @@
 <header>
   <h1>Bridge-Alien Analytics</h1>
   <div class="filters">
-    <label>From</label>
-    <input type="date" id="from">
-    <label>To</label>
-    <input type="date" id="to">
+    <label>From</label><input type="date" id="from">
+    <label>To</label><input type="date" id="to">
     <button onclick="load()">조회</button>
   </div>
 </header>
@@ -196,183 +130,396 @@
 <main>
   <div id="error-msg"></div>
 
-  <!-- 요약 카드 -->
+  <!-- 1. Overview -->
+  <div class="section-title">1 · Overview</div>
   <div class="cards">
     <div class="card">
       <div class="label">Total Players</div>
-      <div class="value" id="total-players">—</div>
+      <div class="value" id="c-players">—</div>
     </div>
     <div class="card">
       <div class="label">Total Sessions</div>
-      <div class="value" id="total-sessions">—</div>
+      <div class="value" id="c-sessions">—</div>
     </div>
     <div class="card">
-      <div class="label">Avg Session Duration</div>
-      <div class="value" id="avg-duration">—</div>
+      <div class="label">Avg Session</div>
+      <div class="value" id="c-duration">—</div>
       <div class="unit">seconds</div>
     </div>
-  </div>
-
-  <!-- 스테이지 이탈률 -->
-  <div class="section">
-    <h2>Stage Dropoff</h2>
-    <div id="stage-empty" class="empty" style="display:none">데이터 없음</div>
-    <div class="chart-wrap" id="stage-chart-wrap">
-      <canvas id="stage-chart"></canvas>
+    <div class="card">
+      <div class="label">Sessions / Player</div>
+      <div class="value" id="c-spp">—</div>
     </div>
   </div>
 
-  <!-- 미니게임 -->
-  <div class="section">
-    <h2>Minigame Summary</h2>
-    <div id="mini-empty" class="empty" style="display:none">데이터 없음</div>
-    <table id="mini-table">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Play Count</th>
-          <th>Success Rate</th>
-          <th>Avg Score</th>
-          <th>Avg Duration</th>
-          <th>Avg Combo</th>
-        </tr>
-      </thead>
-      <tbody id="mini-tbody"></tbody>
-    </table>
+  <div style="margin-top:16px">
+    <div class="panel">
+      <h2>일별 신규 플레이어</h2>
+      <div class="chart-wrap"><canvas id="daily-chart"></canvas></div>
+    </div>
   </div>
+
+  <!-- 2. Stage Funnel -->
+  <div class="section-title">2 · Stage Funnel</div>
+  <div class="panel">
+    <h2>스테이지별 진입 · 클리어 · 실패</h2>
+    <div id="funnel-empty" class="empty" style="display:none">데이터 없음</div>
+    <div class="grid2">
+      <div class="chart-wrap-tall"><canvas id="funnel-chart"></canvas></div>
+      <div style="overflow-x:auto">
+        <table class="funnel" id="funnel-table">
+          <thead>
+            <tr>
+              <th>Stage</th><th>Enter</th><th>Clear</th><th>Fail</th>
+              <th>Clear Rate</th><th>Dropoff</th>
+            </tr>
+          </thead>
+          <tbody id="funnel-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Stage Score -->
+  <div class="section-title">3 · Stage Score Distribution</div>
+  <div class="grid2">
+    <div class="panel">
+      <h2>별점 분포 (stage_clear)</h2>
+      <div class="chart-wrap-tall"><canvas id="star-chart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>클리어 vs 실패 평균 시간</h2>
+      <div class="chart-wrap-tall"><canvas id="time-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 4. Minigame -->
+  <div class="section-title">4 · Minigame Performance</div>
+  <div class="grid2">
+    <div class="panel">
+      <h2>미니게임 성과</h2>
+      <div id="mini-empty" class="empty" style="display:none">데이터 없음</div>
+      <table class="mini-table" id="mini-table">
+        <thead>
+          <tr>
+            <th>Type</th><th>Plays</th><th>Success</th>
+            <th>Avg Score</th><th>Avg Time</th><th>Avg Combo</th>
+          </tr>
+        </thead>
+        <tbody id="mini-tbody"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>미니게임 평균 점수 비교</h2>
+      <div class="chart-wrap-tall"><canvas id="mini-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 5. Retention -->
+  <div class="section-title">5 · Retention</div>
+  <div class="grid2">
+    <div class="panel">
+      <h2>세션 횟수 분포</h2>
+      <div class="chart-wrap-tall"><canvas id="retention-chart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>재방문 현황</h2>
+      <div class="cards" style="grid-template-columns:1fr 1fr; margin-top:8px;">
+        <div class="card">
+          <div class="label">1회 플레이</div>
+          <div class="value" id="r-one">—</div>
+          <div class="unit" id="r-one-pct"></div>
+        </div>
+        <div class="card">
+          <div class="label">재방문 (2회+)</div>
+          <div class="value" id="r-ret">—</div>
+          <div class="unit" id="r-ret-pct"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <script>
-  let stageChart = null;
+const charts = {};
 
-  // 기본 날짜: 최근 30일
-  const today = new Date();
-  const past  = new Date(today);
-  past.setDate(past.getDate() - 30);
-  document.getElementById('to').value   = today.toISOString().slice(0, 10);
-  document.getElementById('from').value = past.toISOString().slice(0, 10);
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
 
-  function showError(msg) {
+function mkChart(id, config) {
+  destroyChart(id);
+  charts[id] = new Chart(document.getElementById(id), config);
+}
+
+const COLORS = {
+  purple: '#7c3aed', green: '#10b981', red: '#ef4444',
+  blue: '#3b82f6', yellow: '#f59e0b', teal: '#14b8a6',
+  grid: '#1e2235', tick: '#475569'
+};
+
+function darkAxes(extra = {}) {
+  return {
+    x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, ...extra.x },
+    y: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, beginAtZero: true, ...extra.y }
+  };
+}
+
+function darkLegend() {
+  return { labels: { color: '#94a3b8', font: { size: 12 } } };
+}
+
+// 날짜 기본값
+const today = new Date();
+const past  = new Date(today); past.setDate(past.getDate() - 30);
+document.getElementById('to').value   = today.toISOString().slice(0, 10);
+document.getElementById('from').value = past.toISOString().slice(0, 10);
+
+async function load() {
+  document.getElementById('error-msg').style.display = 'none';
+  const from = document.getElementById('from').value;
+  const to   = document.getElementById('to').value;
+  const base = window.location.origin;
+
+  try {
+    const [summary, stages, stagesDetail, minigames, daily, retention] = await Promise.all([
+      fetch(`${base}/analytics/summary?from=${from}&to=${to}`).then(r => r.json()),
+      fetch(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`).then(r => r.json()),
+      fetch(`${base}/analytics/stages/detail?from=${from}&to=${to}`).then(r => r.json()),
+      fetch(`${base}/analytics/minigames/summary?from=${from}&to=${to}`).then(r => r.json()),
+      fetch(`${base}/analytics/daily/players?from=${from}&to=${to}`).then(r => r.json()),
+      fetch(`${base}/analytics/retention?from=${from}&to=${to}`).then(r => r.json()),
+    ]);
+
+    renderOverview(summary, retention);
+    renderDaily(daily);
+    renderFunnel(stages);
+    renderStageDetail(stagesDetail);
+    renderMinigames(minigames);
+    renderRetention(retention);
+  } catch(e) {
     const el = document.getElementById('error-msg');
-    el.textContent = msg;
+    el.textContent = '데이터를 불러오지 못했습니다: ' + e.message;
     el.style.display = 'block';
   }
+}
 
-  function hideError() {
-    document.getElementById('error-msg').style.display = 'none';
+/* ── 1. Overview ── */
+function renderOverview(s, retention) {
+  document.getElementById('c-players').textContent  = s.totalPlayers.toLocaleString();
+  document.getElementById('c-sessions').textContent = s.totalSessions.toLocaleString();
+  document.getElementById('c-duration').textContent = Math.round(s.avgSessionDurationSec).toLocaleString();
+  const spp = s.totalPlayers > 0 ? (s.totalSessions / s.totalPlayers).toFixed(1) : '—';
+  document.getElementById('c-spp').textContent = spp;
+}
+
+/* ── 일별 신규 플레이어 ── */
+function renderDaily(data) {
+  if (!data || data.length === 0) {
+    mkChart('daily-chart', { type: 'line', data: { labels: [], datasets: [] } });
+    return;
   }
-
-  async function load() {
-    hideError();
-    const from = document.getElementById('from').value;
-    const to   = document.getElementById('to').value;
-    const base = window.location.origin;
-
-    try {
-      const [summary, stages, minigames] = await Promise.all([
-        fetch(`${base}/analytics/summary?from=${from}&to=${to}`).then(r => r.json()),
-        fetch(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`).then(r => r.json()),
-        fetch(`${base}/analytics/minigames/summary?from=${from}&to=${to}`).then(r => r.json()),
-      ]);
-
-      renderSummary(summary);
-      renderStages(stages);
-      renderMinigames(minigames);
-    } catch (e) {
-      showError('데이터를 불러오지 못했습니다: ' + e.message);
+  mkChart('daily-chart', {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.day),
+      datasets: [{
+        label: '신규 플레이어',
+        data: data.map(d => d.newPlayers),
+        borderColor: COLORS.purple,
+        backgroundColor: 'rgba(124,58,237,0.12)',
+        fill: true, tension: 0.3, pointRadius: 4,
+        pointBackgroundColor: COLORS.purple
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
     }
+  });
+}
+
+/* ── 2. Stage Funnel ── */
+function renderFunnel(data) {
+  const empty = document.getElementById('funnel-empty');
+  if (!data || data.length === 0) {
+    empty.style.display = 'block';
+    destroyChart('funnel-chart');
+    document.getElementById('funnel-tbody').innerHTML = '';
+    return;
   }
+  empty.style.display = 'none';
 
-  function renderSummary(data) {
-    document.getElementById('total-players').textContent  = data.totalPlayers.toLocaleString();
-    document.getElementById('total-sessions').textContent = data.totalSessions.toLocaleString();
-    document.getElementById('avg-duration').textContent   = Math.round(data.avgSessionDurationSec).toLocaleString();
-  }
-
-  function renderStages(data) {
-    const wrap  = document.getElementById('stage-chart-wrap');
-    const empty = document.getElementById('stage-empty');
-
-    if (!data || data.length === 0) {
-      wrap.style.display  = 'none';
-      empty.style.display = 'block';
-      return;
+  mkChart('funnel-chart', {
+    type: 'bar',
+    data: {
+      labels: data.map(s => s.stageId),
+      datasets: [
+        { label: 'Enter', data: data.map(s => s.enterCount), backgroundColor: COLORS.blue },
+        { label: 'Clear', data: data.map(s => s.clearCount), backgroundColor: COLORS.green },
+        { label: 'Fail',  data: data.map(s => s.failCount),  backgroundColor: COLORS.red },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
     }
+  });
 
-    wrap.style.display  = 'block';
-    empty.style.display = 'none';
+  const tbody = document.getElementById('funnel-tbody');
+  tbody.innerHTML = '';
+  data.forEach((s, i) => {
+    const rate     = (s.clearRate * 100).toFixed(1);
+    const cls      = s.clearRate >= 0.8 ? 'good' : s.clearRate >= 0.5 ? 'mid' : 'bad';
+    const prev     = i > 0 ? data[i - 1] : null;
+    const dropoff  = prev && prev.clearCount > 0
+      ? ((1 - s.enterCount / prev.clearCount) * 100).toFixed(1) + '%'
+      : '—';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${s.stageId}</strong></td>
+        <td>${s.enterCount}</td>
+        <td>${s.clearCount}</td>
+        <td>${s.failCount}</td>
+        <td>
+          <span class="rate-pill ${cls}">${rate}%</span>
+          <div class="bar-bg"><div class="bar-fill" style="width:${rate}%"></div></div>
+        </td>
+        <td style="color:#64748b">${dropoff}</td>
+      </tr>`;
+  });
+}
 
-    const labels     = data.map(s => s.stageId);
-    const enterData  = data.map(s => s.enterCount);
-    const clearData  = data.map(s => s.clearCount);
-    const failData   = data.map(s => s.failCount);
-
-    if (stageChart) stageChart.destroy();
-
-    stageChart = new Chart(document.getElementById('stage-chart'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Enter',  data: enterData, backgroundColor: '#4f46e5' },
-          { label: 'Clear',  data: clearData, backgroundColor: '#10b981' },
-          { label: 'Fail',   data: failData,  backgroundColor: '#ef4444' },
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
-          tooltip: {
-            callbacks: {
-              afterBody: (items) => {
-                const idx   = items[0].dataIndex;
-                const stage = data[idx];
-                return `Clear Rate: ${(stage.clearRate * 100).toFixed(1)}%`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2235' } },
-          y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2235' }, beginAtZero: true }
-        }
-      }
-    });
+/* ── 3. Stage Detail ── */
+function renderStageDetail(data) {
+  if (!data || data.length === 0) {
+    destroyChart('star-chart');
+    destroyChart('time-chart');
+    return;
   }
 
-  function renderMinigames(data) {
-    const tbody = document.getElementById('mini-tbody');
-    const table = document.getElementById('mini-table');
-    const empty = document.getElementById('mini-empty');
-    tbody.innerHTML = '';
+  const labels = data.map(d => d.stageId);
 
-    if (!data || data.length === 0) {
-      table.style.display = 'none';
-      empty.style.display = 'block';
-      return;
+  mkChart('star-chart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '★☆☆', data: data.map(d => d.star1Count), backgroundColor: '#ef4444', stack: 'star' },
+        { label: '★★☆', data: data.map(d => d.star2Count), backgroundColor: COLORS.yellow, stack: 'star' },
+        { label: '★★★', data: data.map(d => d.star3Count), backgroundColor: COLORS.green,  stack: 'star' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
     }
+  });
 
-    table.style.display = '';
-    empty.style.display = 'none';
+  mkChart('time-chart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Clear avg (s)', data: data.map(d => d.avgClearDurationSec), backgroundColor: COLORS.green },
+        { label: 'Fail avg (s)',  data: data.map(d => d.avgFailDurationSec),  backgroundColor: COLORS.red },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
+    }
+  });
+}
 
-    data.forEach(m => {
-      const rate  = m.successRate * 100;
-      const badge = rate >= 70 ? 'badge-good' : rate >= 40 ? 'badge-mid' : 'badge-bad';
-      tbody.innerHTML += `
-        <tr>
-          <td>${m.minigameType}</td>
-          <td>${m.playCount.toLocaleString()}</td>
-          <td><span class="badge ${badge}">${rate.toFixed(1)}%</span></td>
-          <td>${Math.round(m.avgScore).toLocaleString()}</td>
-          <td>${m.avgDurationSec.toFixed(1)}s</td>
-          <td>${m.avgComboCount.toFixed(1)}</td>
-        </tr>`;
-    });
+/* ── 4. Minigame ── */
+function renderMinigames(data) {
+  const tbody = document.getElementById('mini-tbody');
+  const table = document.getElementById('mini-table');
+  const empty = document.getElementById('mini-empty');
+  tbody.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    table.style.display = 'none'; empty.style.display = 'block';
+    destroyChart('mini-chart'); return;
   }
 
-  load();
+  table.style.display = ''; empty.style.display = 'none';
+
+  data.forEach(m => {
+    const rate = (m.successRate * 100).toFixed(1);
+    const cls  = m.successRate >= 0.7 ? 'good' : m.successRate >= 0.4 ? 'mid' : 'bad';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${m.minigameType}</strong></td>
+        <td>${m.playCount.toLocaleString()}</td>
+        <td><span class="rate-pill ${cls}">${rate}%</span></td>
+        <td>${Math.round(m.avgScore).toLocaleString()}</td>
+        <td>${m.avgDurationSec.toFixed(1)}s</td>
+        <td>${m.avgComboCount.toFixed(1)}</td>
+      </tr>`;
+  });
+
+  mkChart('mini-chart', {
+    type: 'bar',
+    data: {
+      labels: data.map(m => m.minigameType),
+      datasets: [{
+        label: 'Avg Score',
+        data: data.map(m => Math.round(m.avgScore)),
+        backgroundColor: COLORS.purple
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
+    }
+  });
+}
+
+/* ── 5. Retention ── */
+function renderRetention(data) {
+  if (!data || data.length === 0) {
+    destroyChart('retention-chart');
+    document.getElementById('r-one').textContent = '—';
+    document.getElementById('r-ret').textContent = '—';
+    return;
+  }
+
+  mkChart('retention-chart', {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.sessionCount + '회'),
+      datasets: [{
+        label: '플레이어 수',
+        data: data.map(d => d.playerCount),
+        backgroundColor: data.map((_, i) => i === 0 ? COLORS.blue : COLORS.purple)
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: darkLegend() },
+      scales: darkAxes()
+    }
+  });
+
+  const total = data.reduce((s, d) => s + d.playerCount, 0);
+  const one   = data.find(d => d.sessionCount === 1)?.playerCount ?? 0;
+  const ret   = total - one;
+
+  document.getElementById('r-one').textContent     = one.toLocaleString();
+  document.getElementById('r-one-pct').textContent = total > 0 ? `${(one / total * 100).toFixed(1)}%` : '';
+  document.getElementById('r-ret').textContent     = ret.toLocaleString();
+  document.getElementById('r-ret-pct').textContent = total > 0 ? `${(ret / total * 100).toFixed(1)}%` : '';
+}
+
+load();
 </script>
 </body>
 </html>

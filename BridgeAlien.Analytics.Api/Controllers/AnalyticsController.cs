@@ -50,4 +50,37 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
         var result = await repo.GetMinigameSummaryAsync(f, t);
         return Ok(result);
     }
+
+    [HttpGet("daily/players")]
+    public async Task<IActionResult> GetDailyNewPlayers(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var f = from ?? DateTime.UtcNow.AddDays(-30);
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
+        var result = await repo.GetDailyNewPlayersAsync(f, t);
+        return Ok(result);
+    }
+
+    [HttpGet("stages/detail")]
+    public async Task<IActionResult> GetStageDetail(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var f = from ?? DateTime.UtcNow.AddDays(-30);
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
+        var result = await repo.GetStageDetailAsync(f, t);
+        return Ok(result);
+    }
+
+    [HttpGet("retention")]
+    public async Task<IActionResult> GetRetention(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var f = from ?? DateTime.UtcNow.AddDays(-30);
+        var t = to   ?? DateTime.UtcNow.AddDays(1);
+        var result = await repo.GetRetentionAsync(f, t);
+        return Ok(result);
+    }
 }
