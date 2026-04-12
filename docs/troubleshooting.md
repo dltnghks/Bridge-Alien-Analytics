@@ -248,6 +248,38 @@ var t = to ?? DateTime.UtcNow.AddDays(1);
 
 ---
 
+---
+
+## 이슈 8 — DateOnly / DateTime 타입 불일치
+
+### 증상
+```
+Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot convert type 'System.DateOnly' to 'System.DateTime'
+   at AnalyticsRepository.GetDailyNewPlayersAsync
+```
+
+`GET /analytics/daily/players` 호출 시 500 에러 발생. 다른 엔드포인트는 정상.
+
+### 원인
+`date_trunc('day', ...)::date`로 캐스팅하면 Npgsql이 PostgreSQL `date` 타입을 C# `DateOnly`로 매핑한다.  
+코드에서 `(DateTime)r.day`로 캐스팅하려 하자 런타임 바인딩 오류가 발생했다.
+
+### 해결
+SQL에서 `::date` 캐스팅을 제거해 `TIMESTAMPTZ`로 반환하도록 변경했다.  
+Npgsql은 `TIMESTAMPTZ`를 `DateTime`으로 매핑하므로 기존 코드와 호환된다.
+
+```sql
+-- 변경 전
+date_trunc('day', first_seen)::date AS day
+GROUP BY date_trunc('day', first_seen)::date
+
+-- 변경 후
+date_trunc('day', first_seen) AS day
+GROUP BY date_trunc('day', first_seen)
+```
+
+---
+
 ## 요약
 
 | # | 이슈 | 원인 | 해결 |
@@ -259,3 +291,4 @@ var t = to ?? DateTime.UtcNow.AddDays(1);
 | 5 | top-level statements 빌드 에러 | static 선언 위치 문제 | 인라인 조건식으로 대체 |
 | 6 | DATABASE_URL URI 파싱 실패 | Npgsql이 URI 형식 미지원 | `System.Uri`로 직접 변환 |
 | 7 | 조회 API 이벤트 누락 | 쿼리 구조 + 날짜 범위 문제 | 쿼리 재작성 + 기본 to 조정 |
+| 8 | `DateOnly` → `DateTime` 타입 오류 | `::date` 캐스팅으로 타입 불일치 | `::date` 제거해 TIMESTAMPTZ 유지 |

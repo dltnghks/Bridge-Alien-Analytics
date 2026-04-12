@@ -3,6 +3,7 @@
 Unity 게임 **Bridge-Alien**의 플레이어 행동 통계를 수집·저장·조회하는 백엔드 API.  
 포트폴리오 목적으로 제작. 스테이지 이탈률, 미니게임 성과 등 행동 데이터를 분석할 수 있다.
 
+- **대시보드**: `https://<your-domain>/dashboard.html`
 - **API 문서**: `https://<your-domain>/scalar/v1`
 - **기술 스택**: ASP.NET Core 9 / PostgreSQL / Dapper / Railway
 
@@ -25,8 +26,12 @@ Unity Client
 조회
   └─ GET /analytics/summary
   └─ GET /analytics/stages/dropoff
+  └─ GET /analytics/stages/detail
   └─ GET /analytics/minigames/summary
+  └─ GET /analytics/daily/players
+  └─ GET /analytics/retention
        └─ Scalar UI (/scalar/v1)
+       └─ Dashboard (/dashboard.html)
 ```
 
 ---
@@ -176,6 +181,70 @@ created_at   TIMESTAMPTZ
   }
 ]
 ```
+
+---
+
+### GET `/analytics/daily/players?from=&to=`
+
+날짜별 신규 플레이어 수.
+
+**Response**
+```json
+[
+  { "day": "2026-04-10", "newPlayers": 3 },
+  { "day": "2026-04-11", "newPlayers": 7 },
+  { "day": "2026-04-12", "newPlayers": 12 }
+]
+```
+
+---
+
+### GET `/analytics/stages/detail?from=&to=`
+
+스테이지별 별점 분포 및 클리어/실패 평균 시간.
+
+**Response**
+```json
+[
+  {
+    "stageId": "CH1",
+    "star1Count": 5,
+    "star2Count": 38,
+    "star3Count": 48,
+    "avgClearDurationSec": 74.2,
+    "avgFailDurationSec": 41.8
+  }
+]
+```
+
+---
+
+### GET `/analytics/retention?from=&to=`
+
+플레이어별 세션 횟수 분포.
+
+**Response**
+```json
+[
+  { "sessionCount": 1, "playerCount": 54 },
+  { "sessionCount": 2, "playerCount": 31 },
+  { "sessionCount": 3, "playerCount": 18 }
+]
+```
+
+---
+
+## 대시보드
+
+`/dashboard.html`에서 수집된 데이터를 시각화해 확인할 수 있다.
+
+| 섹션 | 내용 |
+|---|---|
+| Overview | 총 플레이어/세션 수, 평균 세션 시간, 일별 신규 플레이어 |
+| Stage Funnel | 스테이지별 진입·클리어·실패 바차트 + 클리어율·이탈률 테이블 |
+| Stage Score | 별점 분포 누적 바차트, 클리어 vs 실패 평균 시간 비교 |
+| Minigame | 미니게임별 성과 테이블 + 평균 점수 차트 |
+| Retention | 세션 횟수 분포 바차트, 재방문 플레이어 비율 |
 
 ---
 
