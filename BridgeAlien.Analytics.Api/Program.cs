@@ -1,11 +1,6 @@
 using BridgeAlien.Analytics.Api.Repositories;
 using Scalar.AspNetCore;
 
-static class StringExtensions
-{
-    public static string? NullIfEmpty(this string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
-}
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Railway가 주입하는 PORT 환경변수 대응
@@ -16,9 +11,11 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // 연결 문자열: appsettings → DATABASE_URL(Railway) 순서로 탐색
+static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
 var connectionString =
-    builder.Configuration.GetConnectionString("Postgres").NullIfEmpty()
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL").NullIfEmpty()
+    NullIfEmpty(builder.Configuration.GetConnectionString("Postgres"))
+    ?? NullIfEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
     ?? throw new InvalidOperationException("PostgreSQL 연결 문자열이 설정되지 않았습니다.");
 
 builder.Services.AddSingleton(new AnalyticsRepository(connectionString));
