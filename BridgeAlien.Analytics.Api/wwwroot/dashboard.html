@@ -1,556 +1,682 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bridge-Alien Analytics</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-border: #24324a;
+      --text: #dbe7ff;
+      --muted: #9db1d3;
+      --accent: #2ea8ff;
+      --good: #10b981;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --grid: #1f2c42;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
+      font-family: "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 20% -10%, #1b2d4a 0%, var(--bg) 45%);
+      color: var(--text);
       min-height: 100vh;
     }
 
-    /* Header */
     header {
-      background: #1a1d2e;
-      border-bottom: 1px solid #2d3148;
-      padding: 18px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+      background: rgba(10, 18, 33, 0.92);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 14px 22px;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
-    header h1 { font-size: 18px; font-weight: 700; color: #a78bfa; }
-
-    .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .filters label { font-size: 13px; color: #64748b; }
-    .filters input[type="date"] {
-      background: #0f1117; border: 1px solid #2d3148; border-radius: 6px;
-      color: #e2e8f0; padding: 6px 10px; font-size: 13px;
-    }
-    .filters button {
-      background: #7c3aed; color: #fff; border: none; border-radius: 6px;
-      padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
-    }
-    .filters button:hover { background: #6d28d9; }
-
-    /* Layout */
-    main { padding: 28px 32px; max-width: 1280px; margin: 0 auto; }
-
-    .section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1px; color: #475569; margin: 32px 0 14px;
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
 
-    /* Cards */
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .date-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #0f1729;
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 6px 8px;
+    }
+
+    .date-field input[type="date"] {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+      min-width: 134px;
+    }
+
+    .select-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #0f1729;
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 6px 8px;
+    }
+
+    .select-field select {
+      min-width: 140px;
+      background: #152039;
+      color: var(--text);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .picker-btn,
+    .run-btn {
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .picker-btn {
+      background: #152039;
+      color: var(--text);
+    }
+
+    .picker-btn:hover { background: #1c2a49; }
+
+    .run-btn {
+      background: linear-gradient(120deg, #0d8fff, #2ea8ff);
+      border-color: #2ea8ff;
+      color: #fff;
+      font-weight: 700;
+      padding: 7px 14px;
+    }
+
+    .run-btn:hover { filter: brightness(1.06); }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 22px 36px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .card,
+    .panel {
+      background: linear-gradient(160deg, rgba(18, 26, 43, 0.95), rgba(14, 21, 35, 0.95));
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+    }
 
     .card {
-      background: #1a1d2e; border: 1px solid #2d3148; border-radius: 12px; padding: 22px 24px;
+      padding: 16px;
     }
-    .card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-    .card .value { font-size: 34px; font-weight: 700; color: #a78bfa; line-height: 1; }
-    .card .unit  { font-size: 12px; color: #475569; margin-top: 5px; }
 
-    /* Grid 2-col */
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
 
-    /* Panel */
+    .value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .value.small { font-size: 22px; }
+
+    .hint {
+      margin-top: 7px;
+      color: #89a2c9;
+      font-size: 12px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
     .panel {
-      background: #1a1d2e; border: 1px solid #2d3148; border-radius: 12px; padding: 24px;
+      padding: 18px;
     }
-    .panel h2 { font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 20px; }
 
-    .chart-wrap { position: relative; height: 240px; }
-    .chart-wrap-tall { position: relative; height: 300px; }
-
-    /* Funnel table */
-    .funnel { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .funnel th {
-      text-align: left; padding: 8px 12px; color: #475569; font-size: 11px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-      border-bottom: 1px solid #2d3148;
+    .panel h2 {
+      font-size: 15px;
+      margin-bottom: 14px;
     }
-    .funnel td { padding: 10px 12px; border-bottom: 1px solid #1e2235; color: #e2e8f0; }
-    .funnel tr:last-child td { border-bottom: none; }
 
-    .bar-bg {
-      background: #1e2235; border-radius: 4px; height: 6px; width: 100%; margin-top: 4px;
+    .chart-wrap { position: relative; height: 300px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
     }
-    .bar-fill { height: 6px; border-radius: 4px; background: #7c3aed; }
 
-    .rate-pill {
-      display: inline-block; padding: 2px 9px; border-radius: 20px;
-      font-size: 11px; font-weight: 700;
+    thead th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 9px 8px;
     }
-    .good  { background: #14532d; color: #4ade80; }
-    .mid   { background: #713f12; color: #fbbf24; }
-    .bad   { background: #7f1d1d; color: #f87171; }
 
-    /* Minigame table */
-    .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .mini-table th {
-      text-align: left; padding: 8px 12px; color: #475569; font-size: 11px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-      border-bottom: 1px solid #2d3148;
+    tbody td {
+      padding: 9px 8px;
+      border-bottom: 1px solid #1a2740;
     }
-    .mini-table td { padding: 10px 12px; border-bottom: 1px solid #1e2235; }
-    .mini-table tr:last-child td { border-bottom: none; }
 
-    .empty { text-align: center; padding: 40px; color: #334155; font-size: 13px; }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .pill-good { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .pill-mid { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .pill-bad { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
     #error-msg {
-      display: none; background: #450a0a; color: #fca5a5; border-radius: 8px;
-      padding: 12px 16px; margin-bottom: 20px; font-size: 13px;
+      display: none;
+      border-radius: 12px;
+      border: 1px solid #7f1d1d;
+      background: #3b1010;
+      color: #fecaca;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+      border: 1px dashed var(--panel-border);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 960px) {
+      .grid2 { grid-template-columns: 1fr; }
+      .chart-wrap { height: 260px; }
     }
   </style>
 </head>
 <body>
-
-<header>
-  <h1>Bridge-Alien Analytics</h1>
-  <div class="filters">
-    <label>From</label><input type="date" id="from">
-    <label>To</label><input type="date" id="to">
-    <button onclick="load()">조회</button>
-  </div>
-</header>
-
-<main>
-  <div id="error-msg"></div>
-
-  <!-- 1. Overview -->
-  <div class="section-title">1 · Overview</div>
-  <div class="cards">
-    <div class="card">
-      <div class="label">Total Players</div>
-      <div class="value" id="c-players">—</div>
+  <header>
+    <div class="title">Bridge-Alien Analytics</div>
+    <div class="controls">
+      <div class="date-field">
+        <span>From</span>
+        <input type="date" id="from" />
+        <button class="picker-btn" type="button" onclick="openPicker('from')">달력</button>
+      </div>
+      <div class="date-field">
+        <span>To</span>
+        <input type="date" id="to" />
+        <button class="picker-btn" type="button" onclick="openPicker('to')">달력</button>
+      </div>
+      <div class="select-field">
+        <span>Stage</span>
+        <select id="stage-filter" onchange="applyStageFilter()">
+          <option value="">전체</option>
+        </select>
+      </div>
+      <button class="run-btn" type="button" onclick="load()">조회</button>
     </div>
-    <div class="card">
-      <div class="label">Total Sessions</div>
-      <div class="value" id="c-sessions">—</div>
-    </div>
-    <div class="card">
-      <div class="label">Avg Session</div>
-      <div class="value" id="c-duration">—</div>
-      <div class="unit">seconds</div>
-    </div>
-    <div class="card">
-      <div class="label">Sessions / Player</div>
-      <div class="value" id="c-spp">—</div>
-    </div>
-  </div>
+  </header>
 
-  <div style="margin-top:16px">
-    <div class="panel">
+  <main>
+    <div id="error-msg"></div>
+
+    <section class="cards">
+      <article class="card">
+        <div class="label">Total Players</div>
+        <div id="c-players" class="value">0</div>
+      </article>
+      <article class="card">
+        <div class="label">Total Sessions</div>
+        <div id="c-sessions" class="value">0</div>
+      </article>
+      <article class="card">
+        <div class="label">Avg Session Sec</div>
+        <div id="c-duration" class="value">0</div>
+      </article>
+      <article class="card">
+        <div class="label">Overall Stage Clear Rate</div>
+        <div id="c-clear-rate" class="value small">0%</div>
+      </article>
+      <article class="card">
+        <div class="label">Hardest Stage</div>
+        <div id="c-hard-stage" class="value small">-</div>
+        <div id="c-hard-stage-hint" class="hint">클리어율 기준</div>
+      </article>
+    </section>
+
+    <section class="panel">
       <h2>일별 신규 플레이어</h2>
       <div class="chart-wrap"><canvas id="daily-chart"></canvas></div>
-    </div>
-  </div>
+    </section>
 
-  <!-- 2. Stage Funnel -->
-  <div class="section-title">2 · Stage Funnel</div>
-  <div class="panel">
-    <h2>스테이지별 진입 · 클리어 · 실패</h2>
-    <div id="funnel-empty" class="empty" style="display:none">데이터 없음</div>
-    <div class="grid2">
-      <div class="chart-wrap-tall"><canvas id="funnel-chart"></canvas></div>
-      <div style="overflow-x:auto">
-        <table class="funnel" id="funnel-table">
-          <thead>
-            <tr>
-              <th>Stage</th><th>Enter</th><th>Clear</th><th>Fail</th>
-              <th>Clear Rate</th><th>Dropoff</th>
-            </tr>
-          </thead>
-          <tbody id="funnel-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    <section class="grid2">
+      <article class="panel">
+        <h2>스테이지 진입/클리어/실패</h2>
+        <div class="chart-wrap"><canvas id="stage-volume-chart"></canvas></div>
+      </article>
+      <article class="panel">
+        <h2>스테이지 상세 지표</h2>
+        <div id="stage-table-wrap" style="overflow-x:auto"></div>
+      </article>
+    </section>
 
-  <!-- 3. Stage Score -->
-  <div class="section-title">3 · Stage Score Distribution</div>
-  <div class="grid2">
-    <div class="panel">
-      <h2>별점 분포 (stage_clear)</h2>
-      <div class="chart-wrap-tall"><canvas id="star-chart"></canvas></div>
-    </div>
-    <div class="panel">
-      <h2>클리어 vs 실패 평균 시간</h2>
-      <div class="chart-wrap-tall"><canvas id="time-chart"></canvas></div>
-    </div>
-  </div>
+    <section class="grid2">
+      <article class="panel">
+        <h2>스테이지 별점 분포</h2>
+        <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
+      </article>
+      <article class="panel">
+        <h2>클리어/실패 평균 소요시간</h2>
+        <div class="chart-wrap"><canvas id="duration-chart"></canvas></div>
+      </article>
+    </section>
 
-  <!-- 4. Minigame -->
-  <div class="section-title">4 · Minigame Performance</div>
-  <div class="grid2">
-    <div class="panel">
-      <h2>미니게임 성과</h2>
-      <div id="mini-empty" class="empty" style="display:none">데이터 없음</div>
-      <table class="mini-table" id="mini-table">
-        <thead>
-          <tr>
-            <th>Type</th><th>Plays</th><th>Success</th>
-            <th>Avg Score</th><th>Avg Time</th><th>Avg Combo</th>
-          </tr>
-        </thead>
-        <tbody id="mini-tbody"></tbody>
-      </table>
-    </div>
-    <div class="panel">
-      <h2>미니게임 평균 점수 비교</h2>
-      <div class="chart-wrap-tall"><canvas id="mini-chart"></canvas></div>
-    </div>
-  </div>
+    <section class="grid2">
+      <article class="panel">
+        <h2>세션 수 분포</h2>
+        <div class="chart-wrap"><canvas id="retention-chart"></canvas></div>
+      </article>
+      <article class="panel">
+        <h2>재방문 현황</h2>
+        <section class="cards" style="grid-template-columns:1fr 1fr;">
+          <article class="card">
+            <div class="label">1회만 플레이</div>
+            <div id="r-one" class="value">0</div>
+            <div id="r-one-pct" class="hint">0%</div>
+          </article>
+          <article class="card">
+            <div class="label">재방문(2회+)</div>
+            <div id="r-return" class="value">0</div>
+            <div id="r-return-pct" class="hint">0%</div>
+          </article>
+        </section>
+      </article>
+    </section>
+  </main>
 
-  <!-- 5. Retention -->
-  <div class="section-title">5 · Retention</div>
-  <div class="grid2">
-    <div class="panel">
-      <h2>세션 횟수 분포</h2>
-      <div class="chart-wrap-tall"><canvas id="retention-chart"></canvas></div>
-    </div>
-    <div class="panel">
-      <h2>재방문 현황</h2>
-      <div class="cards" style="grid-template-columns:1fr 1fr; margin-top:8px;">
-        <div class="card">
-          <div class="label">1회 플레이</div>
-          <div class="value" id="r-one">—</div>
-          <div class="unit" id="r-one-pct"></div>
-        </div>
-        <div class="card">
-          <div class="label">재방문 (2회+)</div>
-          <div class="value" id="r-ret">—</div>
-          <div class="unit" id="r-ret-pct"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <script>
+    const charts = {};
+    const state = {
+      summary: null,
+      stageDropoff: [],
+      stageDetail: [],
+      selectedStage: ''
+    };
 
-</main>
+    const COLORS = {
+      blue: '#2ea8ff',
+      green: '#10b981',
+      red: '#ef4444',
+      yellow: '#f59e0b',
+      cyan: '#22d3ee',
+      slate: '#64748b',
+      grid: '#1f2c42',
+      tick: '#8ea9cf'
+    };
 
-<script>
-const charts = {};
-
-function destroyChart(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
-
-function mkChart(id, config) {
-  destroyChart(id);
-  charts[id] = new Chart(document.getElementById(id), config);
-}
-
-const COLORS = {
-  purple: '#7c3aed', green: '#10b981', red: '#ef4444',
-  blue: '#3b82f6', yellow: '#f59e0b', teal: '#14b8a6',
-  grid: '#1e2235', tick: '#475569'
-};
-
-function getApiKey() {
-  const storageKey = 'bridge-alien-analytics-api-key';
-  let apiKey = window.localStorage.getItem(storageKey);
-  if (!apiKey) {
-    apiKey = window.prompt('Analytics API Key를 입력하세요.');
-    if (apiKey) {
-      window.localStorage.setItem(storageKey, apiKey);
+    function mkChart(id, config) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), config);
     }
-  }
-  return apiKey;
-}
 
-function darkAxes(extra = {}) {
-  return {
-    x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, ...extra.x },
-    y: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, beginAtZero: true, ...extra.y }
-  };
-}
+    function axes() {
+      return {
+        x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid } },
+        y: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, beginAtZero: true }
+      };
+    }
 
-function darkLegend() {
-  return { labels: { color: '#94a3b8', font: { size: 12 } } };
-}
+    function legend() {
+      return { labels: { color: '#b9c9e4', font: { size: 12 } } };
+    }
 
-// 날짜 기본값
-const today = new Date();
-const past  = new Date(today); past.setDate(past.getDate() - 30);
-document.getElementById('to').value   = today.toISOString().slice(0, 10);
-document.getElementById('from').value = past.toISOString().slice(0, 10);
+    function openPicker(id) {
+      const input = document.getElementById(id);
+      if (!input) return;
+      if (input.showPicker) input.showPicker();
+      else input.focus();
+    }
 
-async function load() {
-  document.getElementById('error-msg').style.display = 'none';
-  const from = document.getElementById('from').value;
-  const to   = document.getElementById('to').value;
-  const base = window.location.origin;
-  const apiKey = getApiKey();
-
-  if (!apiKey) {
-    const el = document.getElementById('error-msg');
-    el.textContent = 'API Key가 필요합니다.';
-    el.style.display = 'block';
-    return;
-  }
-
-  try {
-    const fetchJson = (url) => fetch(url, {
-      headers: { 'X-Api-Key': apiKey }
-    }).then(async r => {
-      if (!r.ok) {
-        const body = await r.text();
-        throw new Error(body || `HTTP ${r.status}`);
+    function getApiKey() {
+      const storageKey = 'bridge-alien-analytics-api-key';
+      let apiKey = localStorage.getItem(storageKey);
+      if (!apiKey) {
+        apiKey = window.prompt('Analytics API Key를 입력하세요.');
+        if (apiKey) localStorage.setItem(storageKey, apiKey);
       }
-      return r.json();
-    });
-
-    const [summary, stages, stagesDetail, minigames, daily, retention] = await Promise.all([
-      fetchJson(`${base}/analytics/summary?from=${from}&to=${to}`),
-      fetchJson(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`),
-      fetchJson(`${base}/analytics/stages/detail?from=${from}&to=${to}`),
-      fetchJson(`${base}/analytics/minigames/summary?from=${from}&to=${to}`),
-      fetchJson(`${base}/analytics/daily/players?from=${from}&to=${to}`),
-      fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`),
-    ]);
-
-    renderOverview(summary, retention);
-    renderDaily(daily);
-    renderFunnel(stages);
-    renderStageDetail(stagesDetail);
-    renderMinigames(minigames);
-    renderRetention(retention);
-  } catch(e) {
-    const el = document.getElementById('error-msg');
-    el.textContent = '데이터를 불러오지 못했습니다: ' + e.message;
-    el.style.display = 'block';
-  }
-}
-
-/* ── 1. Overview ── */
-function renderOverview(s, retention) {
-  document.getElementById('c-players').textContent  = s.totalPlayers.toLocaleString();
-  document.getElementById('c-sessions').textContent = s.totalSessions.toLocaleString();
-  document.getElementById('c-duration').textContent = Math.round(s.avgSessionDurationSec).toLocaleString();
-  const spp = s.totalPlayers > 0 ? (s.totalSessions / s.totalPlayers).toFixed(1) : '—';
-  document.getElementById('c-spp').textContent = spp;
-}
-
-/* ── 일별 신규 플레이어 ── */
-function renderDaily(data) {
-  if (!data || data.length === 0) {
-    mkChart('daily-chart', { type: 'line', data: { labels: [], datasets: [] } });
-    return;
-  }
-  mkChart('daily-chart', {
-    type: 'line',
-    data: {
-      labels: data.map(d => d.day),
-      datasets: [{
-        label: '신규 플레이어',
-        data: data.map(d => d.newPlayers),
-        borderColor: COLORS.purple,
-        backgroundColor: 'rgba(124,58,237,0.12)',
-        fill: true, tension: 0.3, pointRadius: 4,
-        pointBackgroundColor: COLORS.purple
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+      return apiKey;
     }
-  });
-}
 
-/* ── 2. Stage Funnel ── */
-function renderFunnel(data) {
-  const empty = document.getElementById('funnel-empty');
-  if (!data || data.length === 0) {
-    empty.style.display = 'block';
-    destroyChart('funnel-chart');
-    document.getElementById('funnel-tbody').innerHTML = '';
-    return;
-  }
-  empty.style.display = 'none';
-
-  mkChart('funnel-chart', {
-    type: 'bar',
-    data: {
-      labels: data.map(s => s.stageId),
-      datasets: [
-        { label: 'Enter', data: data.map(s => s.enterCount), backgroundColor: COLORS.blue },
-        { label: 'Clear', data: data.map(s => s.clearCount), backgroundColor: COLORS.green },
-        { label: 'Fail',  data: data.map(s => s.failCount),  backgroundColor: COLORS.red },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+    function pct(numerator, denominator) {
+      if (!denominator) return 0;
+      return (numerator / denominator) * 100;
     }
-  });
 
-  const tbody = document.getElementById('funnel-tbody');
-  tbody.innerHTML = '';
-  data.forEach((s, i) => {
-    const rate     = (s.clearRate * 100).toFixed(1);
-    const cls      = s.clearRate >= 0.8 ? 'good' : s.clearRate >= 0.5 ? 'mid' : 'bad';
-    const prev     = i > 0 ? data[i - 1] : null;
-    const dropoff  = prev && prev.clearCount > 0
-      ? ((1 - s.enterCount / prev.clearCount) * 100).toFixed(1) + '%'
-      : '—';
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${s.stageId}</strong></td>
-        <td>${s.enterCount}</td>
-        <td>${s.clearCount}</td>
-        <td>${s.failCount}</td>
-        <td>
-          <span class="rate-pill ${cls}">${rate}%</span>
-          <div class="bar-bg"><div class="bar-fill" style="width:${rate}%"></div></div>
-        </td>
-        <td style="color:#64748b">${dropoff}</td>
-      </tr>`;
-  });
-}
-
-/* ── 3. Stage Detail ── */
-function renderStageDetail(data) {
-  if (!data || data.length === 0) {
-    destroyChart('star-chart');
-    destroyChart('time-chart');
-    return;
-  }
-
-  const labels = data.map(d => d.stageId);
-
-  mkChart('star-chart', {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '★☆☆', data: data.map(d => d.star1Count), backgroundColor: '#ef4444', stack: 'star' },
-        { label: '★★☆', data: data.map(d => d.star2Count), backgroundColor: COLORS.yellow, stack: 'star' },
-        { label: '★★★', data: data.map(d => d.star3Count), backgroundColor: COLORS.green,  stack: 'star' },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+    function num(value) {
+      return Number(value || 0);
     }
-  });
 
-  mkChart('time-chart', {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Clear avg (s)', data: data.map(d => d.avgClearDurationSec), backgroundColor: COLORS.green },
-        { label: 'Fail avg (s)',  data: data.map(d => d.avgFailDurationSec),  backgroundColor: COLORS.red },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+    const today = new Date();
+    const fromDate = new Date(today);
+    fromDate.setDate(fromDate.getDate() - 30);
+    document.getElementById('to').value = today.toISOString().slice(0, 10);
+    document.getElementById('from').value = fromDate.toISOString().slice(0, 10);
+
+    async function load() {
+      const errorEl = document.getElementById('error-msg');
+      errorEl.style.display = 'none';
+
+      const from = document.getElementById('from').value;
+      const to = document.getElementById('to').value;
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        errorEl.textContent = 'API Key가 필요합니다.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const base = window.location.origin;
+
+      try {
+        const fetchJson = async (url) => {
+          const res = await fetch(url, { headers: { 'X-Api-Key': apiKey } });
+          if (!res.ok) {
+            const body = await res.text();
+            throw new Error(body || `HTTP ${res.status}`);
+          }
+          return res.json();
+        };
+
+        const [summary, stageDropoff, stageDetail, dailyPlayers, retention] = await Promise.all([
+          fetchJson(`${base}/analytics/summary?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/stages/detail?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/daily/players?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`)
+        ]);
+
+        state.summary = summary;
+        state.stageDropoff = stageDropoff;
+        state.stageDetail = stageDetail;
+        hydrateStageFilter(stageDropoff, stageDetail);
+        applyStageFilter();
+        renderDailyPlayers(dailyPlayers);
+        renderRetention(retention);
+      } catch (error) {
+        errorEl.textContent = `데이터 조회 실패: ${error.message}`;
+        errorEl.style.display = 'block';
+      }
     }
-  });
-}
 
-/* ── 4. Minigame ── */
-function renderMinigames(data) {
-  const tbody = document.getElementById('mini-tbody');
-  const table = document.getElementById('mini-table');
-  const empty = document.getElementById('mini-empty');
-  tbody.innerHTML = '';
+    function hydrateStageFilter(dropoffRows, detailRows) {
+      const select = document.getElementById('stage-filter');
+      const current = select.value;
+      const stageSet = new Set();
+      for (const row of dropoffRows) stageSet.add(row.stageId);
+      for (const row of detailRows) stageSet.add(row.stageId);
+      const stages = Array.from(stageSet).sort();
 
-  if (!data || data.length === 0) {
-    table.style.display = 'none'; empty.style.display = 'block';
-    destroyChart('mini-chart'); return;
-  }
+      select.innerHTML = '<option value="">전체</option>';
+      for (const stageId of stages) {
+        const option = document.createElement('option');
+        option.value = stageId;
+        option.textContent = stageId;
+        select.appendChild(option);
+      }
 
-  table.style.display = ''; empty.style.display = 'none';
-
-  data.forEach(m => {
-    const rate = (m.successRate * 100).toFixed(1);
-    const cls  = m.successRate >= 0.7 ? 'good' : m.successRate >= 0.4 ? 'mid' : 'bad';
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${m.minigameType}</strong></td>
-        <td>${m.playCount.toLocaleString()}</td>
-        <td><span class="rate-pill ${cls}">${rate}%</span></td>
-        <td>${Math.round(m.avgScore).toLocaleString()}</td>
-        <td>${m.avgDurationSec.toFixed(1)}s</td>
-        <td>${m.avgComboCount.toFixed(1)}</td>
-      </tr>`;
-  });
-
-  mkChart('mini-chart', {
-    type: 'bar',
-    data: {
-      labels: data.map(m => m.minigameType),
-      datasets: [{
-        label: 'Avg Score',
-        data: data.map(m => Math.round(m.avgScore)),
-        backgroundColor: COLORS.purple
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+      if (current && stages.includes(current)) {
+        select.value = current;
+      } else {
+        select.value = '';
+      }
+      state.selectedStage = select.value;
     }
-  });
-}
 
-/* ── 5. Retention ── */
-function renderRetention(data) {
-  if (!data || data.length === 0) {
-    destroyChart('retention-chart');
-    document.getElementById('r-one').textContent = '—';
-    document.getElementById('r-ret').textContent = '—';
-    return;
-  }
+    function applyStageFilter() {
+      const selected = document.getElementById('stage-filter').value;
+      state.selectedStage = selected;
 
-  mkChart('retention-chart', {
-    type: 'bar',
-    data: {
-      labels: data.map(d => d.sessionCount + '회'),
-      datasets: [{
-        label: '플레이어 수',
-        data: data.map(d => d.playerCount),
-        backgroundColor: data.map((_, i) => i === 0 ? COLORS.blue : COLORS.purple)
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: darkLegend() },
-      scales: darkAxes()
+      const filteredDropoff = selected
+        ? state.stageDropoff.filter(x => x.stageId === selected)
+        : state.stageDropoff;
+      const filteredDetail = selected
+        ? state.stageDetail.filter(x => x.stageId === selected)
+        : state.stageDetail;
+
+      renderOverview(state.summary, filteredDropoff);
+      renderStageVolume(filteredDropoff);
+      renderStageTable(filteredDropoff, filteredDetail);
+      renderStageStars(filteredDetail);
+      renderStageDuration(filteredDetail);
     }
-  });
 
-  const total = data.reduce((s, d) => s + d.playerCount, 0);
-  const one   = data.find(d => d.sessionCount === 1)?.playerCount ?? 0;
-  const ret   = total - one;
+    function renderOverview(summary, stageDropoff) {
+      document.getElementById('c-players').textContent = num(summary.totalPlayers).toLocaleString();
+      document.getElementById('c-sessions').textContent = num(summary.totalSessions).toLocaleString();
+      document.getElementById('c-duration').textContent = Math.round(num(summary.avgSessionDurationSec)).toLocaleString();
 
-  document.getElementById('r-one').textContent     = one.toLocaleString();
-  document.getElementById('r-one-pct').textContent = total > 0 ? `${(one / total * 100).toFixed(1)}%` : '';
-  document.getElementById('r-ret').textContent     = ret.toLocaleString();
-  document.getElementById('r-ret-pct').textContent = total > 0 ? `${(ret / total * 100).toFixed(1)}%` : '';
-}
+      const enterTotal = stageDropoff.reduce((acc, row) => acc + num(row.enterCount), 0);
+      const clearTotal = stageDropoff.reduce((acc, row) => acc + num(row.clearCount), 0);
+      const clearRate = pct(clearTotal, enterTotal);
+      document.getElementById('c-clear-rate').textContent = `${clearRate.toFixed(1)}%`;
 
-load();
-</script>
+      let hardest = '-';
+      let hardestRate = 101;
+      for (const row of stageDropoff) {
+        const enter = num(row.enterCount);
+        if (!enter) continue;
+        const stageRate = pct(num(row.clearCount), enter);
+        if (stageRate < hardestRate) {
+          hardestRate = stageRate;
+          hardest = row.stageId;
+        }
+      }
+
+      document.getElementById('c-hard-stage').textContent = hardest;
+      document.getElementById('c-hard-stage-hint').textContent = hardest === '-' ? '데이터 없음' : `클리어율 ${hardestRate.toFixed(1)}%`;
+    }
+
+    function renderDailyPlayers(rows) {
+      mkChart('daily-chart', {
+        type: 'line',
+        data: {
+          labels: rows.map(x => x.day),
+          datasets: [{
+            label: '신규 플레이어',
+            data: rows.map(x => num(x.newPlayers)),
+            borderColor: COLORS.blue,
+            backgroundColor: 'rgba(46,168,255,0.14)',
+            fill: true,
+            tension: 0.28,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+    }
+
+    function renderStageVolume(rows) {
+      mkChart('stage-volume-chart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(x => x.stageId),
+          datasets: [
+            { label: 'Enter', data: rows.map(x => num(x.enterCount)), backgroundColor: COLORS.blue },
+            { label: 'Clear', data: rows.map(x => num(x.clearCount)), backgroundColor: COLORS.green },
+            { label: 'Fail', data: rows.map(x => num(x.failCount)), backgroundColor: COLORS.red }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+    }
+
+    function renderStageTable(dropoffRows, detailRows) {
+      const detailMap = new Map(detailRows.map(row => [row.stageId, row]));
+
+      if (!dropoffRows.length) {
+        document.getElementById('stage-table-wrap').innerHTML = '<div class="empty">선택 기간 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const lines = [];
+      lines.push('<table>');
+      lines.push('<thead><tr><th>Stage</th><th>Enter</th><th>Clear Rate</th><th>Fail</th><th>Avg Score</th><th>Clear Avg(s)</th></tr></thead><tbody>');
+
+      for (const row of dropoffRows) {
+        const enter = num(row.enterCount);
+        const clearRate = pct(num(row.clearCount), enter);
+        const cls = clearRate >= 80 ? 'pill-good' : clearRate >= 50 ? 'pill-mid' : 'pill-bad';
+        const detail = detailMap.get(row.stageId);
+        const clearAvg = detail ? Number(detail.avgClearDurationSec || 0).toFixed(1) : '-';
+
+        lines.push(
+          `<tr><td><strong>${row.stageId}</strong></td><td>${enter.toLocaleString()}</td><td><span class="pill ${cls}">${clearRate.toFixed(1)}%</span></td><td>${num(row.failCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td><td>${clearAvg}</td></tr>`
+        );
+      }
+
+      lines.push('</tbody></table>');
+      document.getElementById('stage-table-wrap').innerHTML = lines.join('');
+    }
+
+    function renderStageStars(rows) {
+      mkChart('star-chart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(x => x.stageId),
+          datasets: [
+            { label: '1 Star', data: rows.map(x => num(x.star1Count)), stack: 'stars', backgroundColor: '#fb7185' },
+            { label: '2 Star', data: rows.map(x => num(x.star2Count)), stack: 'stars', backgroundColor: COLORS.yellow },
+            { label: '3 Star', data: rows.map(x => num(x.star3Count)), stack: 'stars', backgroundColor: COLORS.green }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+    }
+
+    function renderStageDuration(rows) {
+      mkChart('duration-chart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(x => x.stageId),
+          datasets: [
+            { label: 'Clear Avg (s)', data: rows.map(x => Number(x.avgClearDurationSec || 0)), backgroundColor: COLORS.cyan },
+            { label: 'Fail Avg (s)', data: rows.map(x => Number(x.avgFailDurationSec || 0)), backgroundColor: COLORS.slate }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+    }
+
+    function renderRetention(rows) {
+      mkChart('retention-chart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(x => `${x.sessionCount}회`),
+          datasets: [{
+            label: '플레이어 수',
+            data: rows.map(x => num(x.playerCount)),
+            backgroundColor: rows.map((_, idx) => idx === 0 ? COLORS.blue : COLORS.green)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+
+      const total = rows.reduce((acc, row) => acc + num(row.playerCount), 0);
+      const one = rows.find(row => num(row.sessionCount) === 1)?.playerCount || 0;
+      const returning = total - num(one);
+
+      document.getElementById('r-one').textContent = num(one).toLocaleString();
+      document.getElementById('r-one-pct').textContent = `${pct(num(one), total).toFixed(1)}%`;
+      document.getElementById('r-return').textContent = returning.toLocaleString();
+      document.getElementById('r-return-pct').textContent = `${pct(returning, total).toFixed(1)}%`;
+    }
+
+    load();
+  </script>
 </body>
 </html>
-
