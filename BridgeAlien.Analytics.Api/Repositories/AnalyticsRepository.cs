@@ -6,13 +6,7 @@ namespace BridgeAlien.Analytics.Api.Repositories;
 
 public class AnalyticsRepository(string connectionString)
 {
-    // Railway DATABASE_URL은 postgresql:// URI 형식 → NpgsqlConnectionStringBuilder로 변환
-    private static string Normalize(string cs) =>
-        cs.StartsWith("postgresql://") || cs.StartsWith("postgres://")
-            ? new NpgsqlConnectionStringBuilder(cs) { SslMode = SslMode.Require, TrustServerCertificate = true }.ConnectionString
-            : cs;
-
-    private readonly string _connectionString = Normalize(connectionString);
+    private readonly string _connectionString = connectionString;
 
 
     public async Task<SummaryDto> GetSummaryAsync(DateTime from, DateTime to)
