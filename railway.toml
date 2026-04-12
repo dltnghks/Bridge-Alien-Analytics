@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
+buildCommand = "dotnet publish BridgeAlien.Analytics.Api/BridgeAlien.Analytics.Api.csproj -c Release -o out"
 
 [deploy]
-startCommand = "dotnet BridgeAlien.Analytics.Api.dll"
+startCommand = "dotnet out/BridgeAlien.Analytics.Api.dll"
 healthcheckPath = "/openapi/v1.json"
