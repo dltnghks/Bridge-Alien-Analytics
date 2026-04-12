@@ -259,6 +259,18 @@ const COLORS = {
   grid: '#1e2235', tick: '#475569'
 };
 
+function getApiKey() {
+  const storageKey = 'bridge-alien-analytics-api-key';
+  let apiKey = window.localStorage.getItem(storageKey);
+  if (!apiKey) {
+    apiKey = window.prompt('Analytics API Key를 입력하세요.');
+    if (apiKey) {
+      window.localStorage.setItem(storageKey, apiKey);
+    }
+  }
+  return apiKey;
+}
+
 function darkAxes(extra = {}) {
   return {
     x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, ...extra.x },
@@ -281,15 +293,33 @@ async function load() {
   const from = document.getElementById('from').value;
   const to   = document.getElementById('to').value;
   const base = window.location.origin;
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    const el = document.getElementById('error-msg');
+    el.textContent = 'API Key가 필요합니다.';
+    el.style.display = 'block';
+    return;
+  }
 
   try {
+    const fetchJson = (url) => fetch(url, {
+      headers: { 'X-Api-Key': apiKey }
+    }).then(async r => {
+      if (!r.ok) {
+        const body = await r.text();
+        throw new Error(body || `HTTP ${r.status}`);
+      }
+      return r.json();
+    });
+
     const [summary, stages, stagesDetail, minigames, daily, retention] = await Promise.all([
-      fetch(`${base}/analytics/summary?from=${from}&to=${to}`).then(r => r.json()),
-      fetch(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`).then(r => r.json()),
-      fetch(`${base}/analytics/stages/detail?from=${from}&to=${to}`).then(r => r.json()),
-      fetch(`${base}/analytics/minigames/summary?from=${from}&to=${to}`).then(r => r.json()),
-      fetch(`${base}/analytics/daily/players?from=${from}&to=${to}`).then(r => r.json()),
-      fetch(`${base}/analytics/retention?from=${from}&to=${to}`).then(r => r.json()),
+      fetchJson(`${base}/analytics/summary?from=${from}&to=${to}`),
+      fetchJson(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`),
+      fetchJson(`${base}/analytics/stages/detail?from=${from}&to=${to}`),
+      fetchJson(`${base}/analytics/minigames/summary?from=${from}&to=${to}`),
+      fetchJson(`${base}/analytics/daily/players?from=${from}&to=${to}`),
+      fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`),
     ]);
 
     renderOverview(summary, retention);
@@ -523,3 +553,4 @@ load();
 </script>
 </body>
 </html>
+

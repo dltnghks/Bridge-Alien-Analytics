@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BridgeAlien.Analytics.Api.Models;
 using BridgeAlien.Analytics.Api.Repositories;
@@ -5,6 +6,7 @@ using BridgeAlien.Analytics.Api.Repositories;
 namespace BridgeAlien.Analytics.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("analytics")]
 public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
 {
