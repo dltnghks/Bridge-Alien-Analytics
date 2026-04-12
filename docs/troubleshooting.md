@@ -117,6 +117,137 @@ API 문서는 `/scalar/v1`에서 확인 가능하다.
 
 ---
 
+---
+
+## 이슈 4 — DB 연결 문자열 미사용 (빈 문자열 우선 적용)
+
+### 증상
+```
+System.InvalidOperationException: The ConnectionString property has not been initialized.
+```
+
+### 원인
+`appsettings.json`에 `"Postgres": ""`가 빈 문자열로 설정되어 있었다.  
+`GetConnectionString("Postgres")`가 빈 문자열을 반환하고, `??` 연산자는 빈 문자열을 null로 취급하지 않아 `DATABASE_URL` 환경변수까지 도달하지 못했다.
+
+### 해결
+`appsettings.json`에서 빈 `Postgres` 키를 제거하고, 코드에서 빈 문자열도 null처럼 처리했다.
+
+```csharp
+var pgFromConfig = builder.Configuration.GetConnectionString("Postgres");
+var pgFromEnv    = Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString =
+    (!string.IsNullOrWhiteSpace(pgFromConfig) ? pgFromConfig : null)
+    ?? (!string.IsNullOrWhiteSpace(pgFromEnv) ? pgFromEnv : null)
+    ?? throw new InvalidOperationException("PostgreSQL 연결 문자열이 설정되지 않았습니다.");
+```
+
+---
+
+## 이슈 5 — top-level statements 빌드 에러 (로컬/Railway 환경 차이)
+
+### 증상
+```
+error CS8803: Top-level statements must precede namespace and type declarations.
+```
+
+로컬 빌드는 성공했으나 Railway Docker 빌드에서만 발생했다.
+
+### 원인
+`Program.cs`에 `static class StringExtensions`를 top-level statements 앞에 선언하면서 발생했다. 이어서 `static string? NullIfEmpty` 로컬 함수를 top-level statements 중간에 선언하는 방식도 일부 빌드 환경에서 문제가 됐다.
+
+### 해결
+확장 메서드나 로컬 함수 대신 인라인 조건식으로 처리했다.
+
+```csharp
+// 해결 후
+var pgFromConfig = builder.Configuration.GetConnectionString("Postgres");
+var pgFromEnv    = Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString =
+    (!string.IsNullOrWhiteSpace(pgFromConfig) ? pgFromConfig : null)
+    ?? (!string.IsNullOrWhiteSpace(pgFromEnv) ? pgFromEnv : null)
+    ?? throw new ...;
+```
+
+---
+
+## 이슈 6 — Railway DATABASE_URL URI 형식 파싱 실패
+
+### 증상
+```
+System.ArgumentException: Format of the initialization string does not conform to specification starting at index 0.
+   at Npgsql.NpgsqlConnectionStringBuilder..ctor(String connectionString)
+```
+
+### 원인
+Railway가 제공하는 `DATABASE_URL`은 `postgresql://user:pass@host:port/db` URI 형식이다.  
+Npgsql 10의 `NpgsqlConnection` 생성자와 `NpgsqlConnectionStringBuilder` 생성자는 이 URI 형식을 직접 받지 못한다.
+
+### 해결
+`System.Uri`로 직접 파싱해 Npgsql 키-값 형식 연결 문자열로 변환했다.
+
+```csharp
+private static string ToNpgsqlString(string cs)
+{
+    if (!cs.StartsWith("postgresql://") && !cs.StartsWith("postgres://"))
+        return cs;
+
+    var uri      = new Uri(cs);
+    var userInfo = uri.UserInfo.Split(':');
+    return new NpgsqlConnectionStringBuilder
+    {
+        Host                   = uri.Host,
+        Port                   = uri.Port > 0 ? uri.Port : 5432,
+        Database               = uri.AbsolutePath.TrimStart('/'),
+        Username               = userInfo[0],
+        Password               = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
+        SslMode                = SslMode.Require,
+        TrustServerCertificate = true
+    }.ConnectionString;
+}
+```
+
+---
+
+## 이슈 7 — 조회 API 기본 날짜 범위에서 이벤트 누락
+
+### 증상
+`GET /analytics/summary` 파라미터 없이 호출 시 데이터가 있음에도 0 반환.
+
+### 원인
+두 가지 원인이 복합적으로 작용했다.
+
+1. **summary 쿼리 구조 문제**: `FROM analytics_events WHERE event_name = 'session_end'`를 외부 FROM으로 사용해 `session_end` 이벤트가 없으면 전체 쿼리가 0행을 반환했다.
+2. **기본 `to` 값 문제**: 기본값이 `DateTime.UtcNow`라서 Unity 클라이언트가 보내는 이벤트의 `created_at`이 서버 현재 시각보다 미래이면 BETWEEN 범위에서 누락됐다.
+
+### 해결
+
+**1. summary 쿼리 — 항상 1행 반환하도록 재작성**
+
+```sql
+-- 변경 전: session_end가 없으면 0행
+SELECT ..., AVG(...)
+FROM analytics_events WHERE event_name = 'session_end' AND ...
+
+-- 변경 후: 스칼라 서브쿼리로 분리해 항상 1행
+SELECT
+    (SELECT COUNT(DISTINCT player_id) FROM analytics_events WHERE ...) AS total_players,
+    (SELECT COUNT(DISTINCT session_id) FROM analytics_events WHERE event_name = 'session_start' AND ...) AS total_sessions,
+    (SELECT COALESCE(AVG((payload_json->>'duration_sec')::numeric), 0) FROM analytics_events WHERE event_name = 'session_end' AND ...) AS avg_session_duration_sec
+```
+
+**2. 기본 `to` 값을 내일로 변경**
+
+```csharp
+// 변경 전
+var t = to ?? DateTime.UtcNow;
+
+// 변경 후
+var t = to ?? DateTime.UtcNow.AddDays(1);
+```
+
+---
+
 ## 요약
 
 | # | 이슈 | 원인 | 해결 |
@@ -124,3 +255,7 @@ API 문서는 `/scalar/v1`에서 확인 가능하다.
 | 1 | Nixpacks `dotnet restore` 실패 | 서브디렉터리 구조 미인식 | Dockerfile 직접 작성 |
 | 2 | 헬스체크 `service unavailable` | 앱 크래시로 응답 불가 | 이슈 3 해결 후 자동 해소 |
 | 3 | `TypeLoadException` 앱 크래시 | Swashbuckle ↔ .NET 9 OpenAPI 버전 충돌 | Swashbuckle → Scalar 교체 |
+| 4 | DB 연결 문자열 미사용 | 빈 문자열이 `??` 통과 | 빈 문자열 명시적 처리 |
+| 5 | top-level statements 빌드 에러 | static 선언 위치 문제 | 인라인 조건식으로 대체 |
+| 6 | DATABASE_URL URI 파싱 실패 | Npgsql이 URI 형식 미지원 | `System.Uri`로 직접 변환 |
+| 7 | 조회 API 이벤트 누락 | 쿼리 구조 + 날짜 범위 문제 | 쿼리 재작성 + 기본 to 조정 |
