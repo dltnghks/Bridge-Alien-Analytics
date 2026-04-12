@@ -6,7 +6,26 @@ namespace BridgeAlien.Analytics.Api.Repositories;
 
 public class AnalyticsRepository(string connectionString)
 {
-    private readonly string _connectionString = connectionString;
+    private readonly string _connectionString = ToNpgsqlString(connectionString);
+
+    private static string ToNpgsqlString(string cs)
+    {
+        if (!cs.StartsWith("postgresql://") && !cs.StartsWith("postgres://"))
+            return cs;
+
+        var uri      = new Uri(cs);
+        var userInfo = uri.UserInfo.Split(':');
+        return new NpgsqlConnectionStringBuilder
+        {
+            Host                 = uri.Host,
+            Port                 = uri.Port > 0 ? uri.Port : 5432,
+            Database             = uri.AbsolutePath.TrimStart('/'),
+            Username             = userInfo[0],
+            Password             = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
+            SslMode              = SslMode.Require,
+            TrustServerCertificate = true
+        }.ConnectionString;
+    }
 
 
     public async Task<SummaryDto> GetSummaryAsync(DateTime from, DateTime to)
