@@ -1,4 +1,5 @@
 using BridgeAlien.Analytics.Api.Repositories;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,7 @@ builder.Services.AddSingleton(new AnalyticsRepository(connectionString));
 var app = builder.Build();
 
 app.MapOpenApi();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/openapi/v1.json", "Bridge-Alien Analytics API"));
+app.MapScalarApiReference();
 
 app.MapGet("/health", () => Results.Ok("healthy"));
 
