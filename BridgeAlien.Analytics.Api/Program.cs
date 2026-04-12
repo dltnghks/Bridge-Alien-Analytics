@@ -30,6 +30,8 @@ app.UseExceptionHandler(err => err.Run(async ctx =>
     await ctx.Response.WriteAsJsonAsync(new { error = ex?.Message, detail = ex?.ToString() });
 }));
 
+app.UseStaticFiles();
+
 app.MapOpenApi();
 app.MapScalarApiReference();
 

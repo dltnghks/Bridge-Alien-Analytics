@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bridge-Alien Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1d2e;
+      border-bottom: 1px solid #2d3148;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #a78bfa;
+      letter-spacing: -0.3px;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filters label { font-size: 13px; color: #94a3b8; }
+
+    .filters input[type="date"] {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #e2e8f0;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .filters button {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .filters button:hover { background: #6d28d9; }
+
+    main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    /* 요약 카드 */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #1a1d2e;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .card .label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .card .value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #a78bfa;
+      line-height: 1;
+    }
+
+    .card .unit {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    /* 차트 섹션 */
+    .section {
+      background: #1a1d2e;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .section h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    /* 미니게임 테이블 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #2d3148;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #1e2235;
+      color: #e2e8f0;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-good  { background: #14532d; color: #4ade80; }
+    .badge-mid   { background: #713f12; color: #fbbf24; }
+    .badge-bad   { background: #7f1d1d; color: #f87171; }
+
+    .empty {
+      text-align: center;
+      padding: 48px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    #error-msg {
+      display: none;
+      background: #7f1d1d;
+      color: #fca5a5;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Bridge-Alien Analytics</h1>
+  <div class="filters">
+    <label>From</label>
+    <input type="date" id="from">
+    <label>To</label>
+    <input type="date" id="to">
+    <button onclick="load()">조회</button>
+  </div>
+</header>
+
+<main>
+  <div id="error-msg"></div>
+
+  <!-- 요약 카드 -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Total Players</div>
+      <div class="value" id="total-players">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Sessions</div>
+      <div class="value" id="total-sessions">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Avg Session Duration</div>
+      <div class="value" id="avg-duration">—</div>
+      <div class="unit">seconds</div>
+    </div>
+  </div>
+
+  <!-- 스테이지 이탈률 -->
+  <div class="section">
+    <h2>Stage Dropoff</h2>
+    <div id="stage-empty" class="empty" style="display:none">데이터 없음</div>
+    <div class="chart-wrap" id="stage-chart-wrap">
+      <canvas id="stage-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- 미니게임 -->
+  <div class="section">
+    <h2>Minigame Summary</h2>
+    <div id="mini-empty" class="empty" style="display:none">데이터 없음</div>
+    <table id="mini-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Play Count</th>
+          <th>Success Rate</th>
+          <th>Avg Score</th>
+          <th>Avg Duration</th>
+          <th>Avg Combo</th>
+        </tr>
+      </thead>
+      <tbody id="mini-tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  let stageChart = null;
+
+  // 기본 날짜: 최근 30일
+  const today = new Date();
+  const past  = new Date(today);
+  past.setDate(past.getDate() - 30);
+  document.getElementById('to').value   = today.toISOString().slice(0, 10);
+  document.getElementById('from').value = past.toISOString().slice(0, 10);
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-msg').style.display = 'none';
+  }
+
+  async function load() {
+    hideError();
+    const from = document.getElementById('from').value;
+    const to   = document.getElementById('to').value;
+    const base = window.location.origin;
+
+    try {
+      const [summary, stages, minigames] = await Promise.all([
+        fetch(`${base}/analytics/summary?from=${from}&to=${to}`).then(r => r.json()),
+        fetch(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`).then(r => r.json()),
+        fetch(`${base}/analytics/minigames/summary?from=${from}&to=${to}`).then(r => r.json()),
+      ]);
+
+      renderSummary(summary);
+      renderStages(stages);
+      renderMinigames(minigames);
+    } catch (e) {
+      showError('데이터를 불러오지 못했습니다: ' + e.message);
+    }
+  }
+
+  function renderSummary(data) {
+    document.getElementById('total-players').textContent  = data.totalPlayers.toLocaleString();
+    document.getElementById('total-sessions').textContent = data.totalSessions.toLocaleString();
+    document.getElementById('avg-duration').textContent   = Math.round(data.avgSessionDurationSec).toLocaleString();
+  }
+
+  function renderStages(data) {
+    const wrap  = document.getElementById('stage-chart-wrap');
+    const empty = document.getElementById('stage-empty');
+
+    if (!data || data.length === 0) {
+      wrap.style.display  = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+
+    wrap.style.display  = 'block';
+    empty.style.display = 'none';
+
+    const labels     = data.map(s => s.stageId);
+    const enterData  = data.map(s => s.enterCount);
+    const clearData  = data.map(s => s.clearCount);
+    const failData   = data.map(s => s.failCount);
+
+    if (stageChart) stageChart.destroy();
+
+    stageChart = new Chart(document.getElementById('stage-chart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Enter',  data: enterData, backgroundColor: '#4f46e5' },
+          { label: 'Clear',  data: clearData, backgroundColor: '#10b981' },
+          { label: 'Fail',   data: failData,  backgroundColor: '#ef4444' },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+          tooltip: {
+            callbacks: {
+              afterBody: (items) => {
+                const idx   = items[0].dataIndex;
+                const stage = data[idx];
+                return `Clear Rate: ${(stage.clearRate * 100).toFixed(1)}%`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2235' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e2235' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  function renderMinigames(data) {
+    const tbody = document.getElementById('mini-tbody');
+    const table = document.getElementById('mini-table');
+    const empty = document.getElementById('mini-empty');
+    tbody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+
+    table.style.display = '';
+    empty.style.display = 'none';
+
+    data.forEach(m => {
+      const rate  = m.successRate * 100;
+      const badge = rate >= 70 ? 'badge-good' : rate >= 40 ? 'badge-mid' : 'badge-bad';
+      tbody.innerHTML += `
+        <tr>
+          <td>${m.minigameType}</td>
+          <td>${m.playCount.toLocaleString()}</td>
+          <td><span class="badge ${badge}">${rate.toFixed(1)}%</span></td>
+          <td>${Math.round(m.avgScore).toLocaleString()}</td>
+          <td>${m.avgDurationSec.toFixed(1)}s</td>
+          <td>${m.avgComboCount.toFixed(1)}</td>
+        </tr>`;
+    });
+  }
+
+  load();
+</script>
+</body>
+</html>
