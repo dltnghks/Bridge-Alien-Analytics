@@ -56,6 +56,36 @@
       flex-wrap: wrap;
     }
 
+    .range-field {
+      display: grid;
+      gap: 6px;
+      min-width: 280px;
+      padding: 8px 12px;
+      background: #0f1729;
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+    }
+
+    .range-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .range-value {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .range-field input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
     .date-field {
       display: flex;
       align-items: center;
@@ -267,6 +297,13 @@
         <input type="date" id="to" />
         <button class="picker-btn" type="button" onclick="openPicker('to')">달력</button>
       </div>
+      <label class="range-field" for="range-days">
+        <div class="range-head">
+          <span>기간 슬라이더</span>
+          <span id="range-days-label" class="range-value">최근 30일</span>
+        </div>
+        <input type="range" id="range-days" min="1" max="90" value="30" oninput="applyRangeSlider()" />
+      </label>
       <div class="select-field">
         <span>Stage</span>
         <select id="stage-filter" onchange="applyStageFilter()">
@@ -352,6 +389,31 @@
         </section>
       </article>
     </section>
+
+    <section class="grid2">
+      <article class="panel">
+        <h2>골드 흐름 요약</h2>
+        <section class="cards" style="grid-template-columns:repeat(3, 1fr);">
+          <article class="card">
+            <div class="label">Earned</div>
+            <div id="econ-earned" class="value small">0</div>
+          </article>
+          <article class="card">
+            <div class="label">Spent</div>
+            <div id="econ-spent" class="value small">0</div>
+          </article>
+          <article class="card">
+            <div class="label">Net</div>
+            <div id="econ-net" class="value small">0</div>
+          </article>
+        </section>
+        <div id="econ-breakdown-wrap" style="margin-top:14px; overflow-x:auto"></div>
+      </article>
+      <article class="panel">
+        <h2>유저 별 경제 통계</h2>
+        <div id="player-economy-wrap" style="overflow-x:auto"></div>
+      </article>
+    </section>
   </main>
 
   <script>
@@ -397,6 +459,15 @@
       else input.focus();
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
     function getApiKey() {
       const storageKey = 'bridge-alien-analytics-api-key';
       let apiKey = localStorage.getItem(storageKey);
@@ -421,6 +492,46 @@
     fromDate.setDate(fromDate.getDate() - 30);
     document.getElementById('to').value = today.toISOString().slice(0, 10);
     document.getElementById('from').value = fromDate.toISOString().slice(0, 10);
+    document.getElementById('range-days').value = '30';
+    document.getElementById('range-days-label').textContent = '최근 30일';
+
+    function startOfDay(date) {
+      const clone = new Date(date);
+      clone.setHours(0, 0, 0, 0);
+      return clone;
+    }
+
+    function applyRangeSlider() {
+      const range = document.getElementById('range-days');
+      const days = Number(range.value || 30);
+      const toInput = document.getElementById('to');
+      const toDate = toInput.value ? new Date(toInput.value) : new Date();
+      const from = startOfDay(toDate);
+      from.setDate(from.getDate() - days + 1);
+      document.getElementById('from').value = from.toISOString().slice(0, 10);
+      document.getElementById('range-days-label').textContent = `최근 ${days}일`;
+    }
+
+    function syncRangeFromDates() {
+      const from = document.getElementById('from').value;
+      const to = document.getElementById('to').value;
+      if (!from || !to) return;
+      const fromDateValue = startOfDay(new Date(from));
+      const toDateValue = startOfDay(new Date(to));
+      const diffDays = Math.round((toDateValue - fromDateValue) / 86400000) + 1;
+      if (diffDays >= 1 && diffDays <= 90) {
+        document.getElementById('range-days').value = String(diffDays);
+        document.getElementById('range-days-label').textContent = `최근 ${diffDays}일`;
+      } else {
+        document.getElementById('range-days-label').textContent = `${diffDays}일 범위`;
+      }
+    }
+
+    document.getElementById('from').addEventListener('change', syncRangeFromDates);
+    document.getElementById('to').addEventListener('change', () => {
+      syncRangeFromDates();
+    });
+    syncRangeFromDates();
 
     async function load() {
       const errorEl = document.getElementById('error-msg');
@@ -447,12 +558,14 @@
           return res.json();
         };
 
-        const [summary, stageDropoff, stageDetail, dailyPlayers, retention] = await Promise.all([
+        const [summary, stageDropoff, stageDetail, dailyPlayers, retention, economySummary, playerEconomy] = await Promise.all([
           fetchJson(`${base}/analytics/summary?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/stages/detail?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/daily/players?from=${from}&to=${to}`),
-          fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`)
+          fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/economy/summary?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/economy/players?from=${from}&to=${to}`)
         ]);
 
         state.summary = summary;
@@ -462,6 +575,8 @@
         applyStageFilter();
         renderDailyPlayers(dailyPlayers);
         renderRetention(retention);
+        renderEconomySummary(economySummary);
+        renderPlayerEconomy(playerEconomy);
       } catch (error) {
         errorEl.textContent = `데이터 조회 실패: ${error.message}`;
         errorEl.style.display = 'block';
@@ -600,7 +715,7 @@
         const clearAvg = detail ? Number(detail.avgClearDurationSec || 0).toFixed(1) : '-';
 
         lines.push(
-          `<tr><td><strong>${row.stageId}</strong></td><td>${enter.toLocaleString()}</td><td><span class="pill ${cls}">${clearRate.toFixed(1)}%</span></td><td>${num(row.failCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td><td>${clearAvg}</td></tr>`
+          `<tr><td><strong>${escapeHtml(row.stageId)}</strong></td><td>${enter.toLocaleString()}</td><td><span class="pill ${cls}">${clearRate.toFixed(1)}%</span></td><td>${num(row.failCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td><td>${clearAvg}</td></tr>`
         );
       }
 
@@ -674,6 +789,37 @@
       document.getElementById('r-one-pct').textContent = `${pct(num(one), total).toFixed(1)}%`;
       document.getElementById('r-return').textContent = returning.toLocaleString();
       document.getElementById('r-return-pct').textContent = `${pct(returning, total).toFixed(1)}%`;
+    }
+
+    function renderEconomySummary(summary) {
+      document.getElementById('econ-earned').textContent = num(summary.totalGoldEarned).toLocaleString();
+      document.getElementById('econ-spent').textContent = num(summary.totalGoldSpent).toLocaleString();
+      document.getElementById('econ-net').textContent = num(summary.netGold).toLocaleString();
+
+      const wrap = document.getElementById('econ-breakdown-wrap');
+      if (!summary.breakdown?.length) {
+        wrap.innerHTML = '<div class="empty">선택 기간 골드 변화 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const rows = summary.breakdown.map(row =>
+        `<tr><td>${escapeHtml(row.reason)}</td><td>${num(row.totalEarned).toLocaleString()}</td><td>${num(row.totalSpent).toLocaleString()}</td><td>${num(row.netGold).toLocaleString()}</td><td>${num(row.eventCount).toLocaleString()}</td></tr>`
+      );
+      wrap.innerHTML = `<table><thead><tr><th>Reason</th><th>Earned</th><th>Spent</th><th>Net</th><th>Events</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+    }
+
+    function renderPlayerEconomy(rows) {
+      const wrap = document.getElementById('player-economy-wrap');
+      if (!rows?.length) {
+        wrap.innerHTML = '<div class="empty">선택 기간 유저별 경제 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const topRows = rows.slice(0, 20).map(row =>
+        `<tr><td>${escapeHtml(row.playerId)}</td><td>${num(row.totalGoldEarned).toLocaleString()}</td><td>${num(row.totalGoldSpent).toLocaleString()}</td><td>${num(row.netGold).toLocaleString()}</td><td>${num(row.lastKnownBalance).toLocaleString()}</td></tr>`
+      );
+
+      wrap.innerHTML = `<table><thead><tr><th>Player</th><th>Earned</th><th>Spent</th><th>Net</th><th>Latest Balance</th></tr></thead><tbody>${topRows.join('')}</tbody></table>`;
     }
 
     load();
