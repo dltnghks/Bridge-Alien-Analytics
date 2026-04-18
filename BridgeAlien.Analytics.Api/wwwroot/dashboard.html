@@ -165,6 +165,46 @@
       gap: 16px;
     }
 
+    .tab-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      appearance: none;
+      border: 1px solid var(--panel-border);
+      background: #10192d;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .tab-btn:hover {
+      background: #16233d;
+      color: var(--text);
+    }
+
+    .tab-btn[aria-selected="true"] {
+      background: linear-gradient(120deg, rgba(46, 168, 255, 0.18), rgba(34, 211, 238, 0.14));
+      color: #fff;
+      border-color: #2ea8ff;
+      box-shadow: inset 0 0 0 1px rgba(46, 168, 255, 0.18);
+    }
+
+    .tab-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .tab-panel[hidden] {
+      display: none;
+    }
+
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -316,103 +356,114 @@
 
   <main>
     <div id="error-msg"></div>
-
-    <section class="cards">
-      <article class="card">
-        <div class="label">Total Players</div>
-        <div id="c-players" class="value">0</div>
-      </article>
-      <article class="card">
-        <div class="label">Total Sessions</div>
-        <div id="c-sessions" class="value">0</div>
-      </article>
-      <article class="card">
-        <div class="label">Avg Session Sec</div>
-        <div id="c-duration" class="value">0</div>
-      </article>
-      <article class="card">
-        <div class="label">Overall Stage Clear Rate</div>
-        <div id="c-clear-rate" class="value small">0%</div>
-      </article>
-      <article class="card">
-        <div class="label">Hardest Stage</div>
-        <div id="c-hard-stage" class="value small">-</div>
-        <div id="c-hard-stage-hint" class="hint">클리어율 기준</div>
-      </article>
+    <section class="tab-bar" role="tablist" aria-label="Analytics categories">
+      <button class="tab-btn" id="tab-overview" type="button" role="tab" aria-selected="true" aria-controls="panel-overview" onclick="switchTab('overview')">Overview</button>
+      <button class="tab-btn" id="tab-stage" type="button" role="tab" aria-selected="false" aria-controls="panel-stage" onclick="switchTab('stage')">Stage</button>
+      <button class="tab-btn" id="tab-economy" type="button" role="tab" aria-selected="false" aria-controls="panel-economy" onclick="switchTab('economy')">Economy</button>
     </section>
 
-    <section class="panel">
-      <h2>일별 신규 플레이어</h2>
-      <div class="chart-wrap"><canvas id="daily-chart"></canvas></div>
+    <section class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <section class="cards">
+        <article class="card">
+          <div class="label">Total Players</div>
+          <div id="c-players" class="value">0</div>
+        </article>
+        <article class="card">
+          <div class="label">Total Sessions</div>
+          <div id="c-sessions" class="value">0</div>
+        </article>
+        <article class="card">
+          <div class="label">Avg Session Sec</div>
+          <div id="c-duration" class="value">0</div>
+        </article>
+        <article class="card">
+          <div class="label">Overall Stage Clear Rate</div>
+          <div id="c-clear-rate" class="value small">0%</div>
+        </article>
+        <article class="card">
+          <div class="label">Hardest Stage</div>
+          <div id="c-hard-stage" class="value small">-</div>
+          <div id="c-hard-stage-hint" class="hint">클리어율 기준</div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>일별 신규 플레이어</h2>
+        <div class="chart-wrap"><canvas id="daily-chart"></canvas></div>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>세션 수 분포</h2>
+          <div class="chart-wrap"><canvas id="retention-chart"></canvas></div>
+        </article>
+        <article class="panel">
+          <h2>재방문 현황</h2>
+          <section class="cards" style="grid-template-columns:1fr 1fr;">
+            <article class="card">
+              <div class="label">1회만 플레이</div>
+              <div id="r-one" class="value">0</div>
+              <div id="r-one-pct" class="hint">0%</div>
+            </article>
+            <article class="card">
+              <div class="label">재방문(2회+)</div>
+              <div id="r-return" class="value">0</div>
+              <div id="r-return-pct" class="hint">0%</div>
+            </article>
+          </section>
+        </article>
+      </section>
     </section>
 
-    <section class="grid2">
-      <article class="panel">
-        <h2>스테이지 진입/클리어/실패</h2>
-        <div class="chart-wrap"><canvas id="stage-volume-chart"></canvas></div>
-      </article>
-      <article class="panel">
-        <h2>스테이지 상세 지표</h2>
-        <div id="stage-table-wrap" style="overflow-x:auto"></div>
-      </article>
+    <section class="tab-panel" id="panel-stage" role="tabpanel" aria-labelledby="tab-stage" hidden>
+      <section class="grid2">
+        <article class="panel">
+          <h2>스테이지 진입/클리어/실패</h2>
+          <div class="chart-wrap"><canvas id="stage-volume-chart"></canvas></div>
+        </article>
+        <article class="panel">
+          <h2>스테이지 상세 지표</h2>
+          <div id="stage-table-wrap" style="overflow-x:auto"></div>
+        </article>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>스테이지 별점 분포</h2>
+          <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
+        </article>
+        <article class="panel">
+          <h2>클리어/실패 평균 소요시간</h2>
+          <div class="chart-wrap"><canvas id="duration-chart"></canvas></div>
+        </article>
+      </section>
     </section>
 
-    <section class="grid2">
-      <article class="panel">
-        <h2>스테이지 별점 분포</h2>
-        <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
-      </article>
-      <article class="panel">
-        <h2>클리어/실패 평균 소요시간</h2>
-        <div class="chart-wrap"><canvas id="duration-chart"></canvas></div>
-      </article>
-    </section>
-
-    <section class="grid2">
-      <article class="panel">
-        <h2>세션 수 분포</h2>
-        <div class="chart-wrap"><canvas id="retention-chart"></canvas></div>
-      </article>
-      <article class="panel">
-        <h2>재방문 현황</h2>
-        <section class="cards" style="grid-template-columns:1fr 1fr;">
-          <article class="card">
-            <div class="label">1회만 플레이</div>
-            <div id="r-one" class="value">0</div>
-            <div id="r-one-pct" class="hint">0%</div>
-          </article>
-          <article class="card">
-            <div class="label">재방문(2회+)</div>
-            <div id="r-return" class="value">0</div>
-            <div id="r-return-pct" class="hint">0%</div>
-          </article>
-        </section>
-      </article>
-    </section>
-
-    <section class="grid2">
-      <article class="panel">
-        <h2>골드 흐름 요약</h2>
-        <section class="cards" style="grid-template-columns:repeat(3, 1fr);">
-          <article class="card">
-            <div class="label">Earned</div>
-            <div id="econ-earned" class="value small">0</div>
-          </article>
-          <article class="card">
-            <div class="label">Spent</div>
-            <div id="econ-spent" class="value small">0</div>
-          </article>
-          <article class="card">
-            <div class="label">Net</div>
-            <div id="econ-net" class="value small">0</div>
-          </article>
-        </section>
-        <div id="econ-breakdown-wrap" style="margin-top:14px; overflow-x:auto"></div>
-      </article>
-      <article class="panel">
-        <h2>유저 별 경제 통계</h2>
-        <div id="player-economy-wrap" style="overflow-x:auto"></div>
-      </article>
+    <section class="tab-panel" id="panel-economy" role="tabpanel" aria-labelledby="tab-economy" hidden>
+      <section class="grid2">
+        <article class="panel">
+          <h2>골드 흐름 요약</h2>
+          <section class="cards" style="grid-template-columns:repeat(3, 1fr);">
+            <article class="card">
+              <div class="label">Earned</div>
+              <div id="econ-earned" class="value small">0</div>
+            </article>
+            <article class="card">
+              <div class="label">Spent</div>
+              <div id="econ-spent" class="value small">0</div>
+            </article>
+            <article class="card">
+              <div class="label">Net</div>
+              <div id="econ-net" class="value small">0</div>
+            </article>
+          </section>
+          <div id="econ-breakdown-wrap" style="margin-top:14px; overflow-x:auto"></div>
+        </article>
+        <article class="panel">
+          <h2>유저 별 경제 통계</h2>
+          <div id="player-economy-wrap" style="overflow-x:auto"></div>
+        </article>
+      </section>
     </section>
   </main>
 
@@ -422,7 +473,8 @@
       summary: null,
       stageDropoff: [],
       stageDetail: [],
-      selectedStage: ''
+      selectedStage: '',
+      activeTab: 'overview'
     };
 
     const COLORS = {
@@ -457,6 +509,18 @@
       if (!input) return;
       if (input.showPicker) input.showPicker();
       else input.focus();
+    }
+
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      const tabs = ['overview', 'stage', 'economy'];
+      for (const tab of tabs) {
+        const button = document.getElementById(`tab-${tab}`);
+        const panel = document.getElementById(`panel-${tab}`);
+        const isActive = tab === tabName;
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        panel.hidden = !isActive;
+      }
     }
 
     function escapeHtml(value) {
