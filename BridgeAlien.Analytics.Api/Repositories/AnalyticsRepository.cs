@@ -34,16 +34,16 @@ public class AnalyticsRepository(string connectionString)
         var row = await conn.QuerySingleAsync("""
             SELECT
                 (SELECT COUNT(DISTINCT player_id) FROM analytics_events
-                 WHERE created_at BETWEEN @From AND @To) AS total_players,
+                 WHERE created_at >= @From AND created_at < @To) AS total_players,
 
                 (SELECT COUNT(DISTINCT session_id) FROM analytics_events
                  WHERE event_name = 'session_start'
-                   AND created_at BETWEEN @From AND @To) AS total_sessions,
+                   AND created_at >= @From AND created_at < @To) AS total_sessions,
 
                 (SELECT COALESCE(AVG((payload_json->>'duration_sec')::numeric), 0)
                  FROM analytics_events
                  WHERE event_name = 'session_end'
-                   AND created_at BETWEEN @From AND @To) AS avg_session_duration_sec
+                   AND created_at >= @From AND created_at < @To) AS avg_session_duration_sec
             """,
             new { From = from, To = to });
 
@@ -55,7 +55,7 @@ public class AnalyticsRepository(string connectionString)
             Period = new PeriodDto
             {
                 From = from.ToString("yyyy-MM-dd"),
-                To = to.ToString("yyyy-MM-dd")
+                To = to.AddDays(-1).ToString("yyyy-MM-dd")
             }
         };
     }
@@ -77,7 +77,7 @@ public class AnalyticsRepository(string connectionString)
             FROM analytics_events
             WHERE event_name IN ('stage_enter','stage_clear','stage_fail')
               AND stage_id IS NOT NULL
-              AND created_at BETWEEN @From AND @To
+              AND created_at >= @From AND created_at < @To
             GROUP BY stage_id
             ORDER BY stage_id
             """,
@@ -114,7 +114,7 @@ public class AnalyticsRepository(string connectionString)
                 COALESCE(AVG((payload_json->>'combo_count')::numeric), 0) AS avg_combo_count
             FROM analytics_events
             WHERE event_name = 'minigame_result'
-              AND created_at BETWEEN @From AND @To
+              AND created_at >= @From AND created_at < @To
             GROUP BY payload_json->>'minigame_type'
             ORDER BY payload_json->>'minigame_type'
             """,
@@ -149,7 +149,7 @@ public class AnalyticsRepository(string connectionString)
                 SELECT player_id, MIN(created_at) AS first_seen
                 FROM analytics_events
                 WHERE event_name = 'session_start'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
                 GROUP BY player_id
             ) sub
             GROUP BY date_trunc('day', first_seen)
@@ -179,7 +179,7 @@ public class AnalyticsRepository(string connectionString)
             FROM analytics_events
             WHERE event_name IN ('stage_clear', 'stage_fail')
               AND stage_id IS NOT NULL
-              AND created_at BETWEEN @From AND @To
+              AND created_at >= @From AND created_at < @To
             GROUP BY stage_id
             ORDER BY stage_id
             """,
@@ -208,7 +208,7 @@ public class AnalyticsRepository(string connectionString)
                 SELECT player_id, COUNT(DISTINCT session_id) AS session_count
                 FROM analytics_events
                 WHERE event_name = 'session_start'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
                 GROUP BY player_id
             ) sub
             GROUP BY session_count
@@ -245,7 +245,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS actual_luck_delta
                 FROM analytics_events
                 WHERE event_name = 'task_execute'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             )
             SELECT
                 task_id,
@@ -291,7 +291,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS used_at_stage_sec
                 FROM analytics_events
                 WHERE event_name = 'skill_use'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             )
             SELECT
                 skill_type,
@@ -344,7 +344,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS new_level
                 FROM analytics_events
                 WHERE event_name = 'skill_upgrade'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             )
             SELECT
                 skill_type,
@@ -382,7 +382,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS delta
                 FROM analytics_events
                 WHERE event_name = 'gold_change'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             )
             SELECT
                 COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END), 0) AS total_earned,
@@ -402,7 +402,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS delta
                 FROM analytics_events
                 WHERE event_name = 'gold_change'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             )
             SELECT
                 reason,
@@ -456,7 +456,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS delta
                 FROM analytics_events
                 WHERE event_name = 'gold_change'
-                  AND created_at BETWEEN @From AND @To
+                  AND created_at >= @From AND created_at < @To
             ),
             player_gold AS (
                 SELECT
@@ -497,6 +497,84 @@ public class AnalyticsRepository(string connectionString)
             TotalGoldSpent = Convert.ToInt32(r.total_spent),
             NetGold = Convert.ToInt32(r.net_gold),
             LastKnownBalance = Convert.ToInt32(r.last_balance)
+        });
+    }
+
+    public async Task<IEnumerable<StageTimelinePointDto>> GetStageTimelineAsync(DateTime from, DateTime to)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var rows = await conn.QueryAsync("""
+            WITH skill_events AS (
+                SELECT
+                    stage_id,
+                    ROUND(
+                        CASE
+                            WHEN jsonb_typeof(payload_json->'used_at_stage_sec') = 'number' THEN (payload_json->>'used_at_stage_sec')::numeric
+                            WHEN COALESCE(payload_json->>'used_at_stage_sec', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'used_at_stage_sec')::numeric
+                            ELSE 0
+                        END, 1
+                    ) AS timeline_sec,
+                    'skill_use' AS event_kind,
+                    COALESCE(payload_json->>'skill_type', 'unknown') AS label,
+                    CASE
+                        WHEN jsonb_typeof(payload_json->'score') = 'number' THEN (payload_json->>'score')::numeric
+                        WHEN COALESCE(payload_json->>'score', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'score')::numeric
+                        ELSE 0
+                    END AS score
+                FROM analytics_events
+                WHERE event_name = 'skill_use'
+                  AND stage_id IS NOT NULL
+                  AND created_at >= @From AND created_at < @To
+            ),
+            result_events AS (
+                SELECT
+                    stage_id,
+                    ROUND(
+                        CASE
+                            WHEN jsonb_typeof(payload_json->'duration_sec') = 'number' THEN (payload_json->>'duration_sec')::numeric
+                            WHEN COALESCE(payload_json->>'duration_sec', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'duration_sec')::numeric
+                            ELSE 0
+                        END, 1
+                    ) AS timeline_sec,
+                    'stage_result' AS event_kind,
+                    CASE WHEN event_name = 'stage_clear' THEN 'clear' ELSE 'fail' END AS label,
+                    CASE
+                        WHEN jsonb_typeof(payload_json->'score') = 'number' THEN (payload_json->>'score')::numeric
+                        WHEN COALESCE(payload_json->>'score', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'score')::numeric
+                        ELSE 0
+                    END AS score
+                FROM analytics_events
+                WHERE event_name IN ('stage_clear', 'stage_fail')
+                  AND stage_id IS NOT NULL
+                  AND created_at >= @From AND created_at < @To
+            ),
+            timeline_points AS (
+                SELECT * FROM skill_events
+                UNION ALL
+                SELECT * FROM result_events
+            )
+            SELECT
+                stage_id,
+                timeline_sec,
+                event_kind,
+                label,
+                COUNT(*) AS event_count,
+                COALESCE(AVG(score), 0) AS avg_score
+            FROM timeline_points
+            GROUP BY stage_id, timeline_sec, event_kind, label
+            ORDER BY stage_id, timeline_sec, event_kind, label
+            """,
+            new { From = from, To = to });
+
+        return rows.Select(r => new StageTimelinePointDto
+        {
+            StageId = r.stage_id ?? "",
+            TimelineSec = Convert.ToDouble(r.timeline_sec),
+            EventKind = r.event_kind ?? "",
+            Label = r.label ?? "",
+            EventCount = Convert.ToInt32(r.event_count),
+            AvgScore = Math.Round(Convert.ToDouble(r.avg_score), 1)
         });
     }
 

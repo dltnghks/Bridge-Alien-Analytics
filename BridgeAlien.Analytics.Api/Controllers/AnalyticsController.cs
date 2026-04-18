@@ -10,6 +10,16 @@ namespace BridgeAlien.Analytics.Api.Controllers;
 [Route("analytics")]
 public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
 {
+    private static (DateTime From, DateTime ToExclusive) NormalizeRange(DateTime? from, DateTime? to)
+    {
+        var today = DateTime.UtcNow.Date;
+        var start = from?.Date ?? today.AddDays(-30);
+        var endExclusive = (to?.Date ?? today).AddDays(1);
+        if (endExclusive <= start)
+            endExclusive = start.AddDays(1);
+        return (start, endExclusive);
+    }
+
     [HttpPost("events")]
     public async Task<IActionResult> PostEvents([FromBody] List<AnalyticsEventDto> events)
     {
@@ -23,8 +33,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetSummaryAsync(f, t);
         return Ok(result);
     }
@@ -32,8 +41,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("stages/dropoff")]
     public async Task<IActionResult> GetStageDropoff([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetStageDropoffAsync(f, t);
         return Ok(result);
     }
@@ -41,8 +49,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("minigames/summary")]
     public async Task<IActionResult> GetMinigameSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetMinigameSummaryAsync(f, t);
         return Ok(result);
     }
@@ -50,8 +57,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("daily/players")]
     public async Task<IActionResult> GetDailyNewPlayers([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetDailyNewPlayersAsync(f, t);
         return Ok(result);
     }
@@ -59,8 +65,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("stages/detail")]
     public async Task<IActionResult> GetStageDetail([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetStageDetailAsync(f, t);
         return Ok(result);
     }
@@ -68,8 +73,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("retention")]
     public async Task<IActionResult> GetRetention([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetRetentionAsync(f, t);
         return Ok(result);
     }
@@ -77,8 +81,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("tasks/summary")]
     public async Task<IActionResult> GetTaskSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetTaskSummaryAsync(f, t);
         return Ok(result);
     }
@@ -86,8 +89,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("skills/usage")]
     public async Task<IActionResult> GetSkillUsage([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetSkillUsageAsync(f, t);
         return Ok(result);
     }
@@ -95,8 +97,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("skills/upgrades")]
     public async Task<IActionResult> GetSkillUpgrades([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetSkillUpgradeSummaryAsync(f, t);
         return Ok(result);
     }
@@ -104,8 +105,7 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("economy/summary")]
     public async Task<IActionResult> GetEconomySummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetEconomySummaryAsync(f, t);
         return Ok(result);
     }
@@ -113,9 +113,16 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     [HttpGet("economy/players")]
     public async Task<IActionResult> GetPlayerEconomy([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        var (f, t) = NormalizeRange(from, to);
         var result = await repo.GetPlayerEconomyAsync(f, t);
+        return Ok(result);
+    }
+
+    [HttpGet("stages/timeline")]
+    public async Task<IActionResult> GetStageTimeline([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    {
+        var (f, t) = NormalizeRange(from, to);
+        var result = await repo.GetStageTimelineAsync(f, t);
         return Ok(result);
     }
 }

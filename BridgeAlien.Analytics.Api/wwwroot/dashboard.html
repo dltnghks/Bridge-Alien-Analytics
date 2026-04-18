@@ -263,7 +263,8 @@
       margin-bottom: 14px;
     }
 
-    .inline-tools input[type="search"] {
+    .inline-tools input[type="search"],
+    .inline-tools select {
       min-width: 220px;
       background: #152039;
       color: var(--text);
@@ -455,6 +456,12 @@
         <h2>스테이지 별점 분포</h2>
         <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
       </section>
+
+      <section class="panel">
+        <h2>CH 별 스킬 사용 / 점수 획득 타임라인</h2>
+        <div class="chart-wrap"><canvas id="stage-timeline-chart"></canvas></div>
+        <div id="stage-timeline-wrap" style="margin-top:14px; overflow-x:auto"></div>
+      </section>
     </section>
 
     <section class="tab-panel" id="panel-economy" role="tabpanel" aria-labelledby="tab-economy" hidden>
@@ -462,7 +469,9 @@
         <article class="panel">
           <h2>유저 별 골드 흐름</h2>
           <div class="inline-tools">
-            <input type="search" id="player-search" placeholder="player_id 검색" oninput="renderPlayerEconomy(state.playerEconomy)" />
+            <select id="player-filter" onchange="renderPlayerEconomy(state.playerEconomy)">
+              <option value="">전체 플레이어</option>
+            </select>
           </div>
           <div class="chart-wrap"><canvas id="player-economy-chart"></canvas></div>
           <div id="player-economy-wrap" style="margin-top:14px; overflow-x:auto"></div>
@@ -495,6 +504,7 @@
       summary: null,
       stageDropoff: [],
       stageDetail: [],
+      stageTimeline: [],
       playerEconomy: [],
       selectedStage: '',
       activeTab: 'overview'
@@ -520,6 +530,21 @@
       return {
         x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid } },
         y: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, beginAtZero: true }
+      };
+    }
+
+    function integerAxes() {
+      return {
+        x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid } },
+        y: {
+          ticks: {
+            color: COLORS.tick,
+            precision: 0,
+            callback: (value) => Number.isInteger(Number(value)) ? Number(value).toLocaleString() : ''
+          },
+          grid: { color: COLORS.grid },
+          beginAtZero: true
+        }
       };
     }
 
@@ -645,21 +670,24 @@
           return res.json();
         };
 
-        const [summary, stageDropoff, stageDetail, dailyPlayers, retention, economySummary, playerEconomy] = await Promise.all([
+        const [summary, stageDropoff, stageDetail, dailyPlayers, retention, economySummary, playerEconomy, stageTimeline] = await Promise.all([
           fetchJson(`${base}/analytics/summary?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/stages/dropoff?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/stages/detail?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/daily/players?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/retention?from=${from}&to=${to}`),
           fetchJson(`${base}/analytics/economy/summary?from=${from}&to=${to}`),
-          fetchJson(`${base}/analytics/economy/players?from=${from}&to=${to}`)
+          fetchJson(`${base}/analytics/economy/players?from=${from}&to=${to}`),
+          fetchJson(`${base}/analytics/stages/timeline?from=${from}&to=${to}`)
         ]);
 
         state.summary = summary;
         state.stageDropoff = stageDropoff;
         state.stageDetail = stageDetail;
+        state.stageTimeline = stageTimeline;
         state.playerEconomy = playerEconomy;
         hydrateStageFilter(stageDropoff, stageDetail);
+        hydratePlayerFilter(playerEconomy);
         applyStageFilter();
         renderDailyPlayers(dailyPlayers);
         renderRetention(retention);
@@ -695,6 +723,22 @@
       state.selectedStage = select.value;
     }
 
+    function hydratePlayerFilter(rows) {
+      const select = document.getElementById('player-filter');
+      const current = select.value;
+      const players = rows.map(row => row.playerId).filter(Boolean);
+      select.innerHTML = '<option value="">전체 플레이어</option>';
+      for (const playerId of players) {
+        const option = document.createElement('option');
+        option.value = playerId;
+        option.textContent = playerId;
+        select.appendChild(option);
+      }
+      if (current && players.includes(current)) {
+        select.value = current;
+      }
+    }
+
     function applyStageFilter() {
       const selected = document.getElementById('stage-filter').value;
       state.selectedStage = selected;
@@ -710,6 +754,7 @@
       renderStageVolume(filteredDropoff);
       renderStageTable(filteredDropoff, filteredDetail);
       renderStageStars(filteredDetail);
+      renderStageTimeline(state.stageTimeline, selected);
     }
 
     function renderOverview(summary, stageDropoff) {
@@ -757,7 +802,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: legend() },
-          scales: axes()
+          scales: integerAxes()
         }
       });
     }
@@ -777,14 +822,12 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: legend() },
-          scales: axes()
+          scales: integerAxes()
         }
       });
     }
 
     function renderStageTable(dropoffRows, detailRows) {
-      const detailMap = new Map(detailRows.map(row => [row.stageId, row]));
-
       if (!dropoffRows.length) {
         document.getElementById('stage-table-wrap').innerHTML = '<div class="empty">선택 기간 데이터가 없습니다.</div>';
         return;
@@ -792,17 +835,15 @@
 
       const lines = [];
       lines.push('<table>');
-      lines.push('<thead><tr><th>Stage</th><th>Enter</th><th>Clear Rate</th><th>Fail</th><th>Avg Score</th><th>Clear Avg(s)</th></tr></thead><tbody>');
+      lines.push('<thead><tr><th>Stage</th><th>Enter</th><th>Clear Rate</th><th>Fail</th><th>Avg Score</th></tr></thead><tbody>');
 
       for (const row of dropoffRows) {
         const enter = num(row.enterCount);
         const clearRate = pct(num(row.clearCount), enter);
         const cls = clearRate >= 80 ? 'pill-good' : clearRate >= 50 ? 'pill-mid' : 'pill-bad';
-        const detail = detailMap.get(row.stageId);
-        const clearAvg = detail ? Number(detail.avgClearDurationSec || 0).toFixed(1) : '-';
 
         lines.push(
-          `<tr><td><strong>${escapeHtml(row.stageId)}</strong></td><td>${enter.toLocaleString()}</td><td><span class="pill ${cls}">${clearRate.toFixed(1)}%</span></td><td>${num(row.failCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td><td>${clearAvg}</td></tr>`
+          `<tr><td><strong>${escapeHtml(row.stageId)}</strong></td><td>${enter.toLocaleString()}</td><td><span class="pill ${cls}">${clearRate.toFixed(1)}%</span></td><td>${num(row.failCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td></tr>`
         );
       }
 
@@ -825,9 +866,62 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: legend() },
-          scales: axes()
+          scales: integerAxes()
         }
       });
+    }
+
+    function renderStageTimeline(rows, selectedStage) {
+      const wrap = document.getElementById('stage-timeline-wrap');
+      if (!selectedStage) {
+        if (charts['stage-timeline-chart']) charts['stage-timeline-chart'].destroy();
+        wrap.innerHTML = '<div class="empty">Stage 드롭다운에서 CH를 선택하면 타임라인이 표시됩니다.</div>';
+        return;
+      }
+
+      const filteredRows = rows.filter(row => row.stageId === selectedStage);
+      if (!filteredRows.length) {
+        if (charts['stage-timeline-chart']) charts['stage-timeline-chart'].destroy();
+        wrap.innerHTML = '<div class="empty">선택한 CH의 타임라인 데이터가 없습니다.</div>';
+        return;
+      }
+
+      const skillRows = filteredRows.filter(row => row.eventKind === 'skill_use');
+      const resultRows = filteredRows.filter(row => row.eventKind === 'stage_result');
+
+      mkChart('stage-timeline-chart', {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Skill Use',
+              data: skillRows.map(row => ({ x: Number(row.timelineSec), y: Number(row.avgScore || 0) })),
+              backgroundColor: 'rgba(46,168,255,0.75)',
+              pointRadius: skillRows.map(row => Math.max(5, num(row.eventCount) + 3))
+            },
+            {
+              label: 'Stage Result',
+              data: resultRows.map(row => ({ x: Number(row.timelineSec), y: Number(row.avgScore || 0) })),
+              backgroundColor: 'rgba(16,185,129,0.8)',
+              pointRadius: resultRows.map(row => Math.max(6, num(row.eventCount) + 4))
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: {
+            x: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, title: { display: true, text: 'Stage Timeline Sec', color: COLORS.tick } },
+            y: { ticks: { color: COLORS.tick }, grid: { color: COLORS.grid }, beginAtZero: true, title: { display: true, text: 'Avg Score', color: COLORS.tick } }
+          }
+        }
+      });
+
+      const timelineRows = filteredRows.map(row =>
+        `<tr><td>${Number(row.timelineSec).toFixed(1)}s</td><td>${escapeHtml(row.eventKind)}</td><td>${escapeHtml(row.label)}</td><td>${num(row.eventCount).toLocaleString()}</td><td>${Number(row.avgScore || 0).toFixed(1)}</td></tr>`
+      );
+      wrap.innerHTML = `<table><thead><tr><th>Time</th><th>Kind</th><th>Label</th><th>Count</th><th>Avg Score</th></tr></thead><tbody>${timelineRows.join('')}</tbody></table>`;
     }
 
     function renderRetention(rows) {
@@ -845,7 +939,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: legend() },
-          scales: axes()
+          scales: integerAxes()
         }
       });
 
@@ -877,9 +971,9 @@
     }
 
     function renderPlayerEconomy(rows) {
-      const keyword = document.getElementById('player-search')?.value?.trim().toLowerCase() ?? '';
-      const filteredRows = keyword
-        ? rows.filter(row => String(row.playerId ?? '').toLowerCase().includes(keyword))
+      const selectedPlayer = document.getElementById('player-filter')?.value ?? '';
+      const filteredRows = selectedPlayer
+        ? rows.filter(row => String(row.playerId ?? '') === selectedPlayer)
         : rows;
       const wrap = document.getElementById('player-economy-wrap');
       if (!filteredRows?.length) {
@@ -903,7 +997,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: legend() },
-          scales: axes()
+          scales: integerAxes()
         }
       });
 

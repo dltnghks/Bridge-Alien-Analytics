@@ -111,3 +111,13 @@ public class PlayerEconomyDto
     public int NetGold { get; set; }
     public int LastKnownBalance { get; set; }
 }
+
+public class StageTimelinePointDto
+{
+    public string StageId { get; set; } = "";
+    public double TimelineSec { get; set; }
+    public string EventKind { get; set; } = "";
+    public string Label { get; set; } = "";
+    public int EventCount { get; set; }
+    public double AvgScore { get; set; }
+}
