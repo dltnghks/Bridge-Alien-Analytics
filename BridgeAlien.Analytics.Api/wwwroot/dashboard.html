@@ -692,10 +692,10 @@
     <article class="panel">
       <h2>스킬 타임라인 필터</h2>
       <div class="inline-tools">
-        <select id="stage-filter" onchange="applyStageFilter()">
+        <select id="stage-filter" onchange="applyTimelineFilter()">
           <option value="">CH 선택</option>
         </select>
-        <select id="stage-player-filter" onchange="renderStageTimeline(state.stageTimeline, state.selectedStage)">
+        <select id="stage-player-filter" onchange="renderStageTimeline(state.stageTimeline, state.selectedTimelineStage)">
           <option value="">Player 선택</option>
         </select>
       </div>
@@ -766,7 +766,7 @@
     taskSummary: [],
     skillUpgrades: [],
     economySummary: null,
-    selectedStage: '',
+    selectedTimelineStage: '',
     activeTab: 'overview'
   };
 
@@ -964,9 +964,13 @@
       state.taskSummary = taskSummary;
       state.skillUpgrades = skillUpgrades;
       state.economySummary = economySummary;
-      hydrateStageFilter(stageDropoff, stageDetail);
+      hydrateTimelineStageFilter(stageTimeline, stageDropoff, stageDetail);
       hydratePlayerFilter(playerEconomy);
-      applyStageFilter();
+      renderOverview(summary, stageDropoff);
+      renderStageVolume(stageDropoff);
+      renderStageTable(stageDropoff, stageDetail);
+      renderStageStars(stageDetail);
+      applyTimelineFilter();
       renderDailyPlayers(dailyPlayers);
       renderRetention(retention);
       await loadEconomyScope();
@@ -976,15 +980,16 @@
     }
   }
 
-  function hydrateStageFilter(dropoffRows, detailRows) {
+  function hydrateTimelineStageFilter(timelineRows, dropoffRows, detailRows) {
     const select = document.getElementById('stage-filter');
     const current = select.value;
     const stageSet = new Set();
+    for (const row of timelineRows) stageSet.add(row.stageId);
     for (const row of dropoffRows) stageSet.add(row.stageId);
     for (const row of detailRows) stageSet.add(row.stageId);
     const stages = Array.from(stageSet).sort();
 
-    select.innerHTML = '<option value="">전체</option>';
+    select.innerHTML = '<option value="">CH 선택</option>';
     for (const stageId of stages) {
       const option = document.createElement('option');
       option.value = stageId;
@@ -993,7 +998,7 @@
     }
 
     select.value = (current && stages.includes(current)) ? current : '';
-    state.selectedStage = select.value;
+    state.selectedTimelineStage = select.value;
   }
 
   function hydratePlayerFilter(rows) {
@@ -1010,17 +1015,9 @@
     select.value = (current && players.includes(current)) ? current : '';
   }
 
-  function applyStageFilter() {
+  function applyTimelineFilter() {
     const selected = document.getElementById('stage-filter').value;
-    state.selectedStage = selected;
-
-    const filteredDropoff = selected ? state.stageDropoff.filter(x => x.stageId === selected) : state.stageDropoff;
-    const filteredDetail  = selected ? state.stageDetail.filter(x => x.stageId === selected)  : state.stageDetail;
-
-    renderOverview(state.summary, filteredDropoff);
-    renderStageVolume(filteredDropoff);
-    renderStageTable(filteredDropoff, filteredDetail);
-    renderStageStars(filteredDetail);
+    state.selectedTimelineStage = selected;
     renderStageTimeline(state.stageTimeline, selected);
   }
 
