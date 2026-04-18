@@ -505,9 +505,10 @@ public class AnalyticsRepository(string connectionString)
         await using var conn = new NpgsqlConnection(_connectionString);
 
         var rows = await conn.QueryAsync("""
-            WITH skill_events AS (
+            WITH timeline_points AS (
                 SELECT
                     stage_id,
+                    player_id,
                     ROUND(
                         CASE
                             WHEN jsonb_typeof(payload_json->'used_at_stage_sec') = 'number' THEN (payload_json->>'used_at_stage_sec')::numeric
@@ -515,66 +516,32 @@ public class AnalyticsRepository(string connectionString)
                             ELSE 0
                         END, 1
                     ) AS timeline_sec,
-                    'skill_use' AS event_kind,
-                    COALESCE(payload_json->>'skill_type', 'unknown') AS label,
-                    CASE
-                        WHEN jsonb_typeof(payload_json->'score') = 'number' THEN (payload_json->>'score')::numeric
-                        WHEN COALESCE(payload_json->>'score', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'score')::numeric
-                        ELSE 0
-                    END AS score
+                    COALESCE(payload_json->>'skill_type', 'unknown') AS label
                 FROM analytics_events
                 WHERE event_name = 'skill_use'
                   AND stage_id IS NOT NULL
+                  AND player_id IS NOT NULL
                   AND created_at >= @From AND created_at < @To
-            ),
-            result_events AS (
-                SELECT
-                    stage_id,
-                    ROUND(
-                        CASE
-                            WHEN jsonb_typeof(payload_json->'duration_sec') = 'number' THEN (payload_json->>'duration_sec')::numeric
-                            WHEN COALESCE(payload_json->>'duration_sec', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'duration_sec')::numeric
-                            ELSE 0
-                        END, 1
-                    ) AS timeline_sec,
-                    'stage_result' AS event_kind,
-                    CASE WHEN event_name = 'stage_clear' THEN 'clear' ELSE 'fail' END AS label,
-                    CASE
-                        WHEN jsonb_typeof(payload_json->'score') = 'number' THEN (payload_json->>'score')::numeric
-                        WHEN COALESCE(payload_json->>'score', '') ~ '^-?\d+(\.\d+)?$' THEN (payload_json->>'score')::numeric
-                        ELSE 0
-                    END AS score
-                FROM analytics_events
-                WHERE event_name IN ('stage_clear', 'stage_fail')
-                  AND stage_id IS NOT NULL
-                  AND created_at >= @From AND created_at < @To
-            ),
-            timeline_points AS (
-                SELECT * FROM skill_events
-                UNION ALL
-                SELECT * FROM result_events
             )
             SELECT
                 stage_id,
+                player_id,
                 timeline_sec,
-                event_kind,
                 label,
-                COUNT(*) AS event_count,
-                COALESCE(AVG(score), 0) AS avg_score
+                COUNT(*) AS event_count
             FROM timeline_points
-            GROUP BY stage_id, timeline_sec, event_kind, label
-            ORDER BY stage_id, timeline_sec, event_kind, label
+            GROUP BY stage_id, player_id, timeline_sec, label
+            ORDER BY stage_id, player_id, timeline_sec, label
             """,
             new { From = from, To = to });
 
         return rows.Select(r => new StageTimelinePointDto
         {
             StageId = r.stage_id ?? "",
+            PlayerId = r.player_id ?? "",
             TimelineSec = Convert.ToDouble(r.timeline_sec),
-            EventKind = r.event_kind ?? "",
             Label = r.label ?? "",
-            EventCount = Convert.ToInt32(r.event_count),
-            AvgScore = Math.Round(Convert.ToDouble(r.avg_score), 1)
+            EventCount = Convert.ToInt32(r.event_count)
         });
     }
 

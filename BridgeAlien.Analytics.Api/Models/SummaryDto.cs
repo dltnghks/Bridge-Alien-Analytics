@@ -115,9 +115,8 @@ public class PlayerEconomyDto
 public class StageTimelinePointDto
 {
     public string StageId { get; set; } = "";
+    public string PlayerId { get; set; } = "";
     public double TimelineSec { get; set; }
-    public string EventKind { get; set; } = "";
     public string Label { get; set; } = "";
     public int EventCount { get; set; }
-    public double AvgScore { get; set; }
 }
