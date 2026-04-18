@@ -250,6 +250,30 @@
       gap: 16px;
     }
 
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .inline-tools {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .inline-tools input[type="search"] {
+      min-width: 220px;
+      background: #152039;
+      color: var(--text);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+    }
+
     .panel {
       padding: 18px;
     }
@@ -416,7 +440,7 @@
     </section>
 
     <section class="tab-panel" id="panel-stage" role="tabpanel" aria-labelledby="tab-stage" hidden>
-      <section class="grid2">
+      <section class="stack">
         <article class="panel">
           <h2>스테이지 진입/클리어/실패</h2>
           <div class="chart-wrap"><canvas id="stage-volume-chart"></canvas></div>
@@ -427,22 +451,24 @@
         </article>
       </section>
 
-      <section class="grid2">
-        <article class="panel">
-          <h2>스테이지 별점 분포</h2>
-          <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
-        </article>
-        <article class="panel">
-          <h2>클리어/실패 평균 소요시간</h2>
-          <div class="chart-wrap"><canvas id="duration-chart"></canvas></div>
-        </article>
+      <section class="panel">
+        <h2>스테이지 별점 분포</h2>
+        <div class="chart-wrap"><canvas id="star-chart"></canvas></div>
       </section>
     </section>
 
     <section class="tab-panel" id="panel-economy" role="tabpanel" aria-labelledby="tab-economy" hidden>
-      <section class="grid2">
+      <section class="stack">
         <article class="panel">
-          <h2>골드 흐름 요약</h2>
+          <h2>유저 별 골드 흐름</h2>
+          <div class="inline-tools">
+            <input type="search" id="player-search" placeholder="player_id 검색" oninput="renderPlayerEconomy(state.playerEconomy)" />
+          </div>
+          <div class="chart-wrap"><canvas id="player-economy-chart"></canvas></div>
+          <div id="player-economy-wrap" style="margin-top:14px; overflow-x:auto"></div>
+        </article>
+        <article class="panel">
+          <h2>골드 사유별 흐름 요약</h2>
           <section class="cards" style="grid-template-columns:repeat(3, 1fr);">
             <article class="card">
               <div class="label">Earned</div>
@@ -459,10 +485,6 @@
           </section>
           <div id="econ-breakdown-wrap" style="margin-top:14px; overflow-x:auto"></div>
         </article>
-        <article class="panel">
-          <h2>유저 별 경제 통계</h2>
-          <div id="player-economy-wrap" style="overflow-x:auto"></div>
-        </article>
       </section>
     </section>
   </main>
@@ -473,6 +495,7 @@
       summary: null,
       stageDropoff: [],
       stageDetail: [],
+      playerEconomy: [],
       selectedStage: '',
       activeTab: 'overview'
     };
@@ -635,6 +658,7 @@
         state.summary = summary;
         state.stageDropoff = stageDropoff;
         state.stageDetail = stageDetail;
+        state.playerEconomy = playerEconomy;
         hydrateStageFilter(stageDropoff, stageDetail);
         applyStageFilter();
         renderDailyPlayers(dailyPlayers);
@@ -686,7 +710,6 @@
       renderStageVolume(filteredDropoff);
       renderStageTable(filteredDropoff, filteredDetail);
       renderStageStars(filteredDetail);
-      renderStageDuration(filteredDetail);
     }
 
     function renderOverview(summary, stageDropoff) {
@@ -807,25 +830,6 @@
       });
     }
 
-    function renderStageDuration(rows) {
-      mkChart('duration-chart', {
-        type: 'bar',
-        data: {
-          labels: rows.map(x => x.stageId),
-          datasets: [
-            { label: 'Clear Avg (s)', data: rows.map(x => Number(x.avgClearDurationSec || 0)), backgroundColor: COLORS.cyan },
-            { label: 'Fail Avg (s)', data: rows.map(x => Number(x.avgFailDurationSec || 0)), backgroundColor: COLORS.slate }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: legend() },
-          scales: axes()
-        }
-      });
-    }
-
     function renderRetention(rows) {
       mkChart('retention-chart', {
         type: 'bar',
@@ -873,17 +877,41 @@
     }
 
     function renderPlayerEconomy(rows) {
+      const keyword = document.getElementById('player-search')?.value?.trim().toLowerCase() ?? '';
+      const filteredRows = keyword
+        ? rows.filter(row => String(row.playerId ?? '').toLowerCase().includes(keyword))
+        : rows;
       const wrap = document.getElementById('player-economy-wrap');
-      if (!rows?.length) {
+      if (!filteredRows?.length) {
+        if (charts['player-economy-chart']) charts['player-economy-chart'].destroy();
         wrap.innerHTML = '<div class="empty">선택 기간 유저별 경제 데이터가 없습니다.</div>';
         return;
       }
 
-      const topRows = rows.slice(0, 20).map(row =>
+      const topRows = filteredRows.slice(0, 20);
+      mkChart('player-economy-chart', {
+        type: 'bar',
+        data: {
+          labels: topRows.map(row => row.playerId),
+          datasets: [
+            { label: 'Earned', data: topRows.map(row => num(row.totalGoldEarned)), backgroundColor: COLORS.green },
+            { label: 'Spent', data: topRows.map(row => num(row.totalGoldSpent)), backgroundColor: COLORS.red },
+            { label: 'Net', data: topRows.map(row => num(row.netGold)), backgroundColor: COLORS.blue }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: legend() },
+          scales: axes()
+        }
+      });
+
+      const tableRows = topRows.map(row =>
         `<tr><td>${escapeHtml(row.playerId)}</td><td>${num(row.totalGoldEarned).toLocaleString()}</td><td>${num(row.totalGoldSpent).toLocaleString()}</td><td>${num(row.netGold).toLocaleString()}</td><td>${num(row.lastKnownBalance).toLocaleString()}</td></tr>`
       );
 
-      wrap.innerHTML = `<table><thead><tr><th>Player</th><th>Earned</th><th>Spent</th><th>Net</th><th>Latest Balance</th></tr></thead><tbody>${topRows.join('')}</tbody></table>`;
+      wrap.innerHTML = `<table><thead><tr><th>Player</th><th>Earned</th><th>Spent</th><th>Net</th><th>Latest Balance</th></tr></thead><tbody>${tableRows.join('')}</tbody></table>`;
     }
 
     load();
