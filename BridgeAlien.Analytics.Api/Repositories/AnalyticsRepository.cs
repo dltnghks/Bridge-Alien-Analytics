@@ -223,7 +223,7 @@ public class AnalyticsRepository(string connectionString)
         });
     }
 
-    public async Task<IEnumerable<TaskSummaryDto>> GetTaskSummaryAsync(DateTime from, DateTime to)
+    public async Task<IEnumerable<TaskSummaryDto>> GetTaskSummaryAsync(DateTime from, DateTime to, string? playerId = null)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -245,6 +245,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS actual_luck_delta
                 FROM analytics_events
                 WHERE event_name = 'task_execute'
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
                   AND created_at >= @From AND created_at < @To
             )
             SELECT
@@ -258,7 +259,7 @@ public class AnalyticsRepository(string connectionString)
             GROUP BY task_id, task_name, task_type
             ORDER BY execute_count DESC, task_id
             """,
-            new { From = from, To = to });
+            new { From = from, To = to, PlayerId = playerId });
 
         return rows.Select(r => new TaskSummaryDto
         {
@@ -319,7 +320,7 @@ public class AnalyticsRepository(string connectionString)
         });
     }
 
-    public async Task<IEnumerable<SkillUpgradeSummaryDto>> GetSkillUpgradeSummaryAsync(DateTime from, DateTime to)
+    public async Task<IEnumerable<SkillUpgradeSummaryDto>> GetSkillUpgradeSummaryAsync(DateTime from, DateTime to, string? playerId = null)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -344,6 +345,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS new_level
                 FROM analytics_events
                 WHERE event_name = 'skill_upgrade'
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
                   AND created_at >= @From AND created_at < @To
             )
             SELECT
@@ -356,7 +358,7 @@ public class AnalyticsRepository(string connectionString)
             GROUP BY skill_type
             ORDER BY success_count DESC, skill_type
             """,
-            new { From = from, To = to });
+            new { From = from, To = to, PlayerId = playerId });
 
         return rows.Select(r => new SkillUpgradeSummaryDto
         {
@@ -368,7 +370,7 @@ public class AnalyticsRepository(string connectionString)
         });
     }
 
-    public async Task<EconomySummaryDto> GetEconomySummaryAsync(DateTime from, DateTime to)
+    public async Task<EconomySummaryDto> GetEconomySummaryAsync(DateTime from, DateTime to, string? playerId = null)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -382,6 +384,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS delta
                 FROM analytics_events
                 WHERE event_name = 'gold_change'
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
                   AND created_at >= @From AND created_at < @To
             )
             SELECT
@@ -389,7 +392,7 @@ public class AnalyticsRepository(string connectionString)
                 COALESCE(SUM(CASE WHEN delta < 0 THEN ABS(delta) ELSE 0 END), 0) AS total_spent
             FROM typed_events
             """,
-            new { From = from, To = to });
+            new { From = from, To = to, PlayerId = playerId });
 
         var breakdownRows = await conn.QueryAsync("""
             WITH typed_events AS (
@@ -402,6 +405,7 @@ public class AnalyticsRepository(string connectionString)
                     END AS delta
                 FROM analytics_events
                 WHERE event_name = 'gold_change'
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
                   AND created_at >= @From AND created_at < @To
             )
             SELECT
@@ -413,7 +417,7 @@ public class AnalyticsRepository(string connectionString)
             GROUP BY reason
             ORDER BY event_count DESC, reason
             """,
-            new { From = from, To = to });
+            new { From = from, To = to, PlayerId = playerId });
 
         int totalEarned = Convert.ToInt32(totalRow.total_earned);
         int totalSpent = Convert.ToInt32(totalRow.total_spent);

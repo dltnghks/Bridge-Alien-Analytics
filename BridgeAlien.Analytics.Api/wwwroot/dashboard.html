@@ -7,63 +7,90 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg: #0b1220;
-      --panel: #121a2b;
-      --panel-border: #24324a;
-      --text: #dbe7ff;
-      --muted: #9db1d3;
-      --accent: #2ea8ff;
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-light: #eff6ff;
+      --accent-mid: #bfdbfe;
       --good: #10b981;
+      --good-light: #ecfdf5;
       --warn: #f59e0b;
+      --warn-light: #fffbeb;
       --bad: #ef4444;
-      --grid: #1f2c42;
+      --bad-light: #fef2f2;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+      --radius: 12px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
-      background: radial-gradient(circle at 20% -10%, #1b2d4a 0%, var(--bg) 45%);
+      font-family: "Pretendard", "Noto Sans KR", "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
     header {
       position: sticky;
       top: 0;
       z-index: 20;
-      backdrop-filter: blur(8px);
-      background: rgba(10, 18, 33, 0.92);
-      border-bottom: 1px solid var(--panel-border);
-      padding: 14px 22px;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 60px;
       display: flex;
       justify-content: space-between;
-      gap: 14px;
+      gap: 16px;
       align-items: center;
       flex-wrap: wrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
 
     .title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.3px;
+      color: var(--text);
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-mid);
     }
 
     .controls {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
     .range-field {
       display: grid;
-      gap: 6px;
-      min-width: 280px;
-      padding: 8px 12px;
-      background: #0f1729;
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
+      gap: 5px;
+      min-width: 240px;
+      padding: 7px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
     }
 
     .range-head {
@@ -72,11 +99,12 @@
       align-items: center;
       gap: 10px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 500;
     }
 
     .range-value {
-      color: var(--text);
+      color: var(--accent);
       font-weight: 700;
     }
 
@@ -84,19 +112,25 @@
       width: 100%;
       accent-color: var(--accent);
       cursor: pointer;
+      height: 3px;
     }
 
     .date-field {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       font-size: 12px;
+      font-weight: 500;
       color: var(--muted);
-      background: #0f1729;
-      border: 1px solid var(--panel-border);
-      border-radius: 10px;
-      padding: 6px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 10px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 150ms;
     }
+
+    .date-field:focus-within { border-color: var(--accent); }
 
     .date-field input[type="date"] {
       background: transparent;
@@ -104,7 +138,8 @@
       color: var(--text);
       outline: none;
       font-size: 13px;
-      min-width: 134px;
+      font-weight: 500;
+      min-width: 128px;
     }
 
     .select-field {
@@ -113,18 +148,19 @@
       gap: 8px;
       font-size: 12px;
       color: var(--muted);
-      background: #0f1729;
-      border: 1px solid var(--panel-border);
-      border-radius: 10px;
-      padding: 6px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 10px;
+      box-shadow: var(--shadow-sm);
     }
 
     .select-field select {
       min-width: 140px;
-      background: #152039;
+      background: var(--surface);
       color: var(--text);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
       padding: 5px 8px;
       font-size: 13px;
       outline: none;
@@ -132,73 +168,92 @@
 
     .picker-btn,
     .run-btn {
-      border: 1px solid var(--panel-border);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 7px 12px;
       font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
-      transition: 160ms ease;
+      transition: all 150ms ease;
+      letter-spacing: 0.1px;
     }
 
     .picker-btn {
-      background: #152039;
-      color: var(--text);
+      background: var(--surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
     }
 
-    .picker-btn:hover { background: #1c2a49; }
+    .picker-btn:hover {
+      background: var(--surface-2);
+      border-color: var(--border-strong);
+    }
 
     .run-btn {
-      background: linear-gradient(120deg, #0d8fff, #2ea8ff);
-      border-color: #2ea8ff;
+      background: var(--accent);
+      border: 1px solid transparent;
       color: #fff;
       font-weight: 700;
-      padding: 7px 14px;
+      padding: 8px 18px;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+      letter-spacing: 0.2px;
     }
 
-    .run-btn:hover { filter: brightness(1.06); }
+    .run-btn:hover {
+      background: #2563eb;
+      box-shadow: 0 3px 12px rgba(59,130,246,0.45);
+      transform: translateY(-1px);
+    }
+
+    .run-btn:active { transform: translateY(0); }
 
     main {
-      max-width: 1280px;
+      max-width: 1320px;
       margin: 0 auto;
-      padding: 24px 22px 36px;
+      padding: 28px 28px 48px;
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }
 
     .tab-bar {
       display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      width: fit-content;
+      box-shadow: var(--shadow-sm);
     }
 
     .tab-btn {
       appearance: none;
-      border: 1px solid var(--panel-border);
-      background: #10192d;
+      border: none;
+      background: transparent;
       color: var(--muted);
-      border-radius: 999px;
-      padding: 10px 16px;
+      border-radius: 9px;
+      padding: 8px 18px;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
-      transition: 160ms ease;
+      transition: all 160ms ease;
+      white-space: nowrap;
     }
 
     .tab-btn:hover {
-      background: #16233d;
-      color: var(--text);
+      background: var(--surface-2);
+      color: var(--text-secondary);
     }
 
     .tab-btn[aria-selected="true"] {
-      background: linear-gradient(120deg, rgba(46, 168, 255, 0.18), rgba(34, 211, 238, 0.14));
+      background: var(--accent);
       color: #fff;
-      border-color: #2ea8ff;
-      box-shadow: inset 0 0 0 1px rgba(46, 168, 255, 0.18);
+      box-shadow: 0 2px 6px rgba(59,130,246,0.3);
     }
 
     .tab-panel {
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }
 
     .tab-panel[hidden] {
@@ -208,80 +263,102 @@
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      gap: 14px;
     }
 
     .card,
     .panel {
-      background: linear-gradient(160deg, rgba(18, 26, 43, 0.95), rgba(14, 21, 35, 0.95));
-      border: 1px solid var(--panel-border);
-      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
     }
 
     .card {
-      padding: 16px;
+      padding: 20px;
+      transition: box-shadow 150ms, transform 150ms;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
     }
 
     .label {
       color: var(--muted);
       font-size: 11px;
-      letter-spacing: 0.8px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
       text-transform: uppercase;
       margin-bottom: 10px;
     }
 
     .value {
-      font-size: 30px;
-      font-weight: 700;
+      font-size: 32px;
+      font-weight: 800;
       line-height: 1;
+      color: var(--text);
+      letter-spacing: -0.5px;
     }
 
     .value.small { font-size: 22px; }
 
     .hint {
-      margin-top: 7px;
-      color: #89a2c9;
+      margin-top: 8px;
+      color: var(--muted);
       font-size: 12px;
+      font-weight: 500;
     }
 
     .grid2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 20px;
     }
 
     .stack {
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }
 
     .inline-tools {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
     .inline-tools input[type="search"],
     .inline-tools select {
-      min-width: 220px;
-      background: #152039;
+      min-width: 200px;
+      background: var(--surface-2);
       color: var(--text);
-      border: 1px solid var(--panel-border);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px 10px;
+      padding: 8px 12px;
       font-size: 13px;
+      font-weight: 500;
       outline: none;
+      transition: border-color 150ms;
+    }
+
+    .inline-tools input[type="search"]:focus,
+    .inline-tools select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
     }
 
     .panel {
-      padding: 18px;
+      padding: 22px;
     }
 
     .panel h2 {
-      font-size: 15px;
-      margin-bottom: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: -0.1px;
     }
 
     .chart-wrap { position: relative; height: 300px; }
@@ -296,55 +373,74 @@
       text-align: left;
       color: var(--muted);
       font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.7px;
-      border-bottom: 1px solid var(--panel-border);
-      padding: 9px 8px;
+      letter-spacing: 0.6px;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      background: var(--surface-2);
     }
 
+    thead th:first-child { border-radius: 8px 0 0 0; }
+    thead th:last-child { border-radius: 0 8px 0 0; }
+
     tbody td {
-      padding: 9px 8px;
-      border-bottom: 1px solid #1a2740;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-weight: 500;
     }
+
+    tbody td:first-child { color: var(--text); font-weight: 600; }
 
     tbody tr:last-child td {
       border-bottom: none;
     }
 
-    .pill {
-      display: inline-block;
-      border-radius: 999px;
-      padding: 2px 8px;
-      font-size: 11px;
-      font-weight: 700;
+    tbody tr:hover td {
+      background: var(--surface-2);
     }
 
-    .pill-good { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .pill-mid { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .pill-bad { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .pill {
+      display: inline-block;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .pill-good { background: var(--good-light); color: #059669; border: 1px solid #a7f3d0; }
+    .pill-mid { background: var(--warn-light); color: #d97706; border: 1px solid #fde68a; }
+    .pill-bad { background: var(--bad-light); color: #dc2626; border: 1px solid #fecaca; }
 
     #error-msg {
       display: none;
-      border-radius: 12px;
-      border: 1px solid #7f1d1d;
-      background: #3b1010;
-      color: #fecaca;
-      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+      background: var(--bad-light);
+      color: #dc2626;
+      padding: 12px 16px;
       font-size: 13px;
+      font-weight: 500;
     }
 
     .empty {
       color: var(--muted);
       text-align: center;
-      padding: 20px;
-      border: 1px dashed var(--panel-border);
+      padding: 32px 20px;
+      border: 1px dashed var(--border-strong);
       border-radius: 10px;
       font-size: 13px;
+      font-weight: 500;
+      background: var(--surface-2);
     }
 
     @media (max-width: 960px) {
       .grid2 { grid-template-columns: 1fr; }
-      .chart-wrap { height: 260px; }
+      .chart-wrap { height: 240px; }
+      header { padding: 0 16px; height: auto; padding-top: 10px; padding-bottom: 10px; }
+      main { padding: 16px 16px 32px; }
     }
   </style>
 </head>
@@ -453,6 +549,12 @@
 
       <section class="panel">
         <h2>CH 별 유저 스킬 사용 타임라인</h2>
+        <div class="chart-wrap"><canvas id="stage-timeline-chart"></canvas></div>
+        <div id="stage-timeline-wrap" style="margin-top:14px; overflow-x:auto"></div>
+      </section>
+
+      <section class="panel">
+        <h2>스킬 타임라인 필터</h2>
         <div class="inline-tools">
           <select id="stage-filter" onchange="applyStageFilter()">
             <option value="">CH 선택</option>
@@ -461,8 +563,6 @@
             <option value="">Player 선택</option>
           </select>
         </div>
-        <div class="chart-wrap"><canvas id="stage-timeline-chart"></canvas></div>
-        <div id="stage-timeline-wrap" style="margin-top:14px; overflow-x:auto"></div>
       </section>
     </section>
 
@@ -518,19 +618,20 @@
       playerEconomy: [],
       taskSummary: [],
       skillUpgrades: [],
+      economySummary: null,
       selectedStage: '',
       activeTab: 'overview'
     };
 
     const COLORS = {
-      blue: '#2ea8ff',
+      blue: '#3b82f6',
       green: '#10b981',
       red: '#ef4444',
       yellow: '#f59e0b',
-      cyan: '#22d3ee',
+      cyan: '#06b6d4',
       slate: '#64748b',
-      grid: '#1f2c42',
-      tick: '#8ea9cf'
+      grid: '#e2e8f0',
+      tick: '#94a3b8'
     };
 
     function mkChart(id, config) {
@@ -561,7 +662,7 @@
     }
 
     function legend() {
-      return { labels: { color: '#b9c9e4', font: { size: 12 } } };
+      return { labels: { color: '#475569', font: { size: 12, weight: '600' }, padding: 16, usePointStyle: true, pointStyleWidth: 8 } };
     }
 
     function openPicker(id) {
@@ -702,15 +803,13 @@
         state.playerEconomy = playerEconomy;
         state.taskSummary = taskSummary;
         state.skillUpgrades = skillUpgrades;
+        state.economySummary = economySummary;
         hydrateStageFilter(stageDropoff, stageDetail);
         hydratePlayerFilter(playerEconomy);
         applyStageFilter();
         renderDailyPlayers(dailyPlayers);
         renderRetention(retention);
-        renderEconomySummary(economySummary);
-        renderPlayerEconomy(playerEconomy);
-        renderTaskSummary(taskSummary);
-        renderSkillUpgrades(skillUpgrades);
+        await loadEconomyScope();
       } catch (error) {
         errorEl.textContent = `데이터 조회 실패: ${error.message}`;
         errorEl.style.display = 'block';
@@ -754,6 +853,8 @@
       }
       if (current && players.includes(current)) {
         select.value = current;
+      } else {
+        select.value = '';
       }
     }
 
@@ -895,7 +996,7 @@
       if (!selectedStage) {
         if (charts['stage-timeline-chart']) charts['stage-timeline-chart'].destroy();
         playerSelect.innerHTML = '<option value="">Player 선택</option>';
-        wrap.innerHTML = '<div class="empty">Stage 드롭다운에서 CH를 선택하면 타임라인이 표시됩니다.</div>';
+        wrap.innerHTML = '<div class="empty">아래 필터에서 CH를 선택하면 타임라인이 표시됩니다.</div>';
         return;
       }
 
@@ -1041,13 +1142,37 @@
         ? rows.filter(row => String(row.playerId ?? '') === selectedPlayer)
         : rows;
       const wrap = document.getElementById('player-economy-wrap');
-      if (!filteredRows?.length) {
+      if (selectedPlayer && !filteredRows?.length) {
         if (charts['player-economy-chart']) charts['player-economy-chart'].destroy();
         wrap.innerHTML = '<div class="empty">선택 기간 유저별 경제 데이터가 없습니다.</div>';
         return;
       }
 
-      const topRows = filteredRows.slice(0, 20);
+      if (!selectedPlayer) {
+        const summary = state.economySummary ?? { totalGoldEarned: 0, totalGoldSpent: 0, netGold: 0 };
+        const totalLatestBalance = rows.reduce((acc, row) => acc + num(row.lastKnownBalance), 0);
+        mkChart('player-economy-chart', {
+          type: 'bar',
+          data: {
+            labels: ['전체 플레이어'],
+            datasets: [
+              { label: 'Earned', data: [num(summary.totalGoldEarned)], backgroundColor: COLORS.green },
+              { label: 'Spent', data: [num(summary.totalGoldSpent)], backgroundColor: COLORS.red },
+              { label: 'Net', data: [num(summary.netGold)], backgroundColor: COLORS.blue }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: legend() },
+            scales: integerAxes()
+          }
+        });
+        wrap.innerHTML = `<table><thead><tr><th>Player</th><th>Earned</th><th>Spent</th><th>Net</th><th>Latest Balance</th></tr></thead><tbody><tr><td>전체 플레이어 총합</td><td>${num(summary.totalGoldEarned).toLocaleString()}</td><td>${num(summary.totalGoldSpent).toLocaleString()}</td><td>${num(summary.netGold).toLocaleString()}</td><td>${totalLatestBalance.toLocaleString()}</td></tr></tbody></table>`;
+        return;
+      }
+
+      const topRows = filteredRows.slice(0, 1);
       mkChart('player-economy-chart', {
         type: 'bar',
         data: {
@@ -1072,6 +1197,49 @@
 
       wrap.innerHTML = `<table><thead><tr><th>Player</th><th>Earned</th><th>Spent</th><th>Net</th><th>Latest Balance</th></tr></thead><tbody>${tableRows.join('')}</tbody></table>`;
     }
+
+    async function loadEconomyScope() {
+      const apiKey = getApiKey();
+      if (!apiKey) return;
+
+      const from = document.getElementById('from').value;
+      const to = document.getElementById('to').value;
+      const playerId = document.getElementById('player-filter')?.value ?? '';
+      const base = window.location.origin;
+      const query = playerId ? `&player_id=${encodeURIComponent(playerId)}` : '';
+
+      const fetchJson = async (url) => {
+        const res = await fetch(url, { headers: { 'X-Api-Key': apiKey } });
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(body || `HTTP ${res.status}`);
+        }
+        return res.json();
+      };
+
+      const [economySummary, taskSummary, skillUpgrades] = await Promise.all([
+        fetchJson(`${base}/analytics/economy/summary?from=${from}&to=${to}${query}`),
+        fetchJson(`${base}/analytics/tasks/summary?from=${from}&to=${to}${query}`),
+        fetchJson(`${base}/analytics/skills/upgrades?from=${from}&to=${to}${query}`)
+      ]);
+
+      state.economySummary = economySummary;
+      state.taskSummary = taskSummary;
+      state.skillUpgrades = skillUpgrades;
+
+      renderEconomySummary(economySummary);
+      renderPlayerEconomy(state.playerEconomy);
+      renderTaskSummary(taskSummary);
+      renderSkillUpgrades(skillUpgrades);
+    }
+
+    document.getElementById('player-filter').addEventListener('change', () => {
+      loadEconomyScope().catch(error => {
+        const errorEl = document.getElementById('error-msg');
+        errorEl.textContent = `데이터 조회 실패: ${error.message}`;
+        errorEl.style.display = 'block';
+      });
+    });
 
     load();
   </script>

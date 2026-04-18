@@ -79,10 +79,10 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     }
 
     [HttpGet("tasks/summary")]
-    public async Task<IActionResult> GetTaskSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    public async Task<IActionResult> GetTaskSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "player_id")] string? playerId)
     {
         var (f, t) = NormalizeRange(from, to);
-        var result = await repo.GetTaskSummaryAsync(f, t);
+        var result = await repo.GetTaskSummaryAsync(f, t, playerId);
         return Ok(result);
     }
 
@@ -95,18 +95,18 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
     }
 
     [HttpGet("skills/upgrades")]
-    public async Task<IActionResult> GetSkillUpgrades([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    public async Task<IActionResult> GetSkillUpgrades([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "player_id")] string? playerId)
     {
         var (f, t) = NormalizeRange(from, to);
-        var result = await repo.GetSkillUpgradeSummaryAsync(f, t);
+        var result = await repo.GetSkillUpgradeSummaryAsync(f, t, playerId);
         return Ok(result);
     }
 
     [HttpGet("economy/summary")]
-    public async Task<IActionResult> GetEconomySummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    public async Task<IActionResult> GetEconomySummary([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "player_id")] string? playerId)
     {
         var (f, t) = NormalizeRange(from, to);
-        var result = await repo.GetEconomySummaryAsync(f, t);
+        var result = await repo.GetEconomySummaryAsync(f, t, playerId);
         return Ok(result);
     }
 
