@@ -118,6 +118,13 @@ public class AnalyticsController(AnalyticsRepository repo) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("economy/first-clear-spend")]
+    public async Task<IActionResult> GetFirstClearGoldSpend([FromQuery(Name = "player_id")] string? playerId)
+    {
+        var result = await repo.GetFirstClearGoldSpendAsync(playerId);
+        return Ok(result);
+    }
+
     [HttpGet("stages/timeline")]
     public async Task<IActionResult> GetStageTimeline([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {

@@ -504,6 +504,78 @@ public class AnalyticsRepository(string connectionString)
         });
     }
 
+    public async Task<IEnumerable<FirstClearGoldSpendDto>> GetFirstClearGoldSpendAsync(string? playerId = null)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var rows = await conn.QueryAsync("""
+            WITH target_stages AS (
+                SELECT *
+                FROM (VALUES
+                    ('CH1', 1),
+                    ('CH2', 2),
+                    ('CH3', 3),
+                    ('CH4', 4),
+                    ('CH5', 5),
+                    ('CH6', 6)
+                ) AS s(stage_id, sort_order)
+            ),
+            first_clears AS (
+                SELECT
+                    player_id,
+                    stage_id,
+                    MIN(created_at) AS first_clear_at
+                FROM analytics_events
+                WHERE event_name = 'stage_clear'
+                  AND stage_id IN (SELECT stage_id FROM target_stages)
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
+                GROUP BY player_id, stage_id
+            ),
+            gold_events AS (
+                SELECT
+                    player_id,
+                    created_at,
+                    CASE
+                        WHEN jsonb_typeof(payload_json->'delta') = 'number' THEN (payload_json->>'delta')::int
+                        WHEN COALESCE(payload_json->>'delta', '') ~ '^-?\d+$' THEN (payload_json->>'delta')::int
+                        ELSE 0
+                    END AS delta
+                FROM analytics_events
+                WHERE event_name = 'gold_change'
+                  AND (@PlayerId IS NULL OR player_id = @PlayerId)
+            ),
+            player_stage_spend AS (
+                SELECT
+                    fc.stage_id,
+                    fc.player_id,
+                    COALESCE(SUM(CASE WHEN ge.delta < 0 THEN ABS(ge.delta) ELSE 0 END), 0) AS cumulative_gold_spent
+                FROM first_clears fc
+                LEFT JOIN gold_events ge
+                    ON ge.player_id = fc.player_id
+                   AND ge.created_at <= fc.first_clear_at
+                GROUP BY fc.stage_id, fc.player_id
+            )
+            SELECT
+                ts.stage_id,
+                COUNT(ps.player_id) AS player_count,
+                COALESCE(AVG(ps.cumulative_gold_spent), 0) AS avg_cumulative_gold_spent,
+                COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ps.cumulative_gold_spent), 0) AS median_cumulative_gold_spent
+            FROM target_stages ts
+            LEFT JOIN player_stage_spend ps ON ps.stage_id = ts.stage_id
+            GROUP BY ts.stage_id, ts.sort_order
+            ORDER BY ts.sort_order
+            """,
+            new { PlayerId = playerId });
+
+        return rows.Select(r => new FirstClearGoldSpendDto
+        {
+            StageId = r.stage_id ?? "",
+            PlayerCount = Convert.ToInt32(r.player_count),
+            AvgCumulativeGoldSpent = Convert.ToInt32(Math.Round(Convert.ToDouble(r.avg_cumulative_gold_spent), MidpointRounding.AwayFromZero)),
+            MedianCumulativeGoldSpent = Convert.ToInt32(Math.Round(Convert.ToDouble(r.median_cumulative_gold_spent), MidpointRounding.AwayFromZero))
+        });
+    }
+
     public async Task<IEnumerable<StageTimelinePointDto>> GetStageTimelineAsync(DateTime from, DateTime to)
     {
         await using var conn = new NpgsqlConnection(_connectionString);

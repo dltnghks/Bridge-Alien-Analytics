@@ -112,6 +112,14 @@ public class PlayerEconomyDto
     public int LastKnownBalance { get; set; }
 }
 
+public class FirstClearGoldSpendDto
+{
+    public string StageId { get; set; } = "";
+    public int PlayerCount { get; set; }
+    public int AvgCumulativeGoldSpent { get; set; }
+    public int MedianCumulativeGoldSpent { get; set; }
+}
+
 public class StageTimelinePointDto
 {
     public string StageId { get; set; } = "";

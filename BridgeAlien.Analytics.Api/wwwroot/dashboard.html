@@ -724,6 +724,13 @@
     </article>
 
     <article class="panel">
+      <h2>CH 최초 클리어까지 누적 골드 사용량</h2>
+      <div class="kpi-hint" style="margin-bottom:12px;">전체 데이터 기준 최초 <code>stage_clear</code> 시점까지 누적된 골드 사용량입니다.</div>
+      <div class="chart-wrap"><canvas id="first-clear-spend-chart"></canvas></div>
+      <div id="first-clear-spend-wrap" class="table-wrap" style="margin-top:4px;"></div>
+    </article>
+
+    <article class="panel">
       <h2>골드 사유별 흐름 요약</h2>
       <div class="econ-cards">
         <div class="econ-card earned">
@@ -766,6 +773,7 @@
     taskSummary: [],
     skillUpgrades: [],
     economySummary: null,
+    firstClearSpend: [],
     selectedTimelineStage: '',
     activeTab: 'overview'
   };
@@ -1320,6 +1328,58 @@
     </table>`;
   }
 
+  function renderFirstClearSpend(rows) {
+    const selectedPlayer = document.getElementById('player-filter')?.value ?? '';
+    const wrap = document.getElementById('first-clear-spend-wrap');
+    if (!rows?.length) {
+      if (charts['first-clear-spend-chart']) charts['first-clear-spend-chart'].destroy();
+      wrap.innerHTML = emptyState('최초 클리어 누적 골드 사용 데이터가 없습니다.');
+      return;
+    }
+
+    if (!selectedPlayer) {
+      mkChart('first-clear-spend-chart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(row => row.stageId),
+          datasets: [
+            { label: 'Avg', data: rows.map(row => num(row.avgCumulativeGoldSpent)), backgroundColor: COLORS.blue, borderRadius: 4 },
+            { label: 'Median', data: rows.map(row => num(row.medianCumulativeGoldSpent)), backgroundColor: COLORS.yellow, borderRadius: 4 }
+          ]
+        },
+        options: { plugins: { legend: legend() }, scales: integerAxes() }
+      });
+
+      const tableRows = rows.map(row =>
+        `<tr><td>${escapeHtml(row.stageId)}</td><td>${num(row.playerCount).toLocaleString()}</td><td>${num(row.avgCumulativeGoldSpent).toLocaleString()}</td><td>${num(row.medianCumulativeGoldSpent).toLocaleString()}</td></tr>`
+      );
+      wrap.innerHTML = `<table>
+        <thead><tr><th>CH</th><th>Cleared Players</th><th>Avg Spent</th><th>Median Spent</th></tr></thead>
+        <tbody>${tableRows.join('')}</tbody>
+      </table>`;
+      return;
+    }
+
+    mkChart('first-clear-spend-chart', {
+      type: 'bar',
+      data: {
+        labels: rows.map(row => row.stageId),
+        datasets: [
+          { label: 'Cumulative Spent', data: rows.map(row => num(row.avgCumulativeGoldSpent)), backgroundColor: COLORS.blue, borderRadius: 4 }
+        ]
+      },
+      options: { plugins: { legend: legend() }, scales: integerAxes() }
+    });
+
+    const tableRows = rows.map(row =>
+      `<tr><td>${escapeHtml(row.stageId)}</td><td>${num(row.avgCumulativeGoldSpent).toLocaleString()}</td></tr>`
+    );
+    wrap.innerHTML = `<table>
+      <thead><tr><th>CH</th><th>Cumulative Spent</th></tr></thead>
+      <tbody>${tableRows.join('')}</tbody>
+    </table>`;
+  }
+
   async function loadEconomyScope() {
     const apiKey = getApiKey();
     if (!apiKey) return;
@@ -1336,20 +1396,23 @@
       return res.json();
     };
 
-    const [economySummary, taskSummary, skillUpgrades] = await Promise.all([
+    const [economySummary, taskSummary, skillUpgrades, firstClearSpend] = await Promise.all([
       fetchJson(`${base}/analytics/economy/summary?from=${from}&to=${to}${query}`),
       fetchJson(`${base}/analytics/tasks/summary?from=${from}&to=${to}${query}`),
-      fetchJson(`${base}/analytics/skills/upgrades?from=${from}&to=${to}${query}`)
+      fetchJson(`${base}/analytics/skills/upgrades?from=${from}&to=${to}${query}`),
+      fetchJson(`${base}/analytics/economy/first-clear-spend?${playerId ? `player_id=${encodeURIComponent(playerId)}` : ''}`)
     ]);
 
     state.economySummary = economySummary;
     state.taskSummary    = taskSummary;
     state.skillUpgrades  = skillUpgrades;
+    state.firstClearSpend = firstClearSpend;
 
     renderEconomySummary(economySummary);
     renderPlayerEconomy(state.playerEconomy);
     renderTaskSummary(taskSummary);
     renderSkillUpgrades(skillUpgrades);
+    renderFirstClearSpend(firstClearSpend);
   }
 
   document.getElementById('player-filter').addEventListener('change', () => {
